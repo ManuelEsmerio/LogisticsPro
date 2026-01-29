@@ -39,7 +39,7 @@ function DashboardLayoutContent({
               onClick={toggleSidebar}
           >
               <ChevronsLeft className="shrink-0 size-4 transition-transform duration-200 group-data-[state=collapsed]:rotate-180" />
-              <span className="group-data-[state=collapsed]:hidden">Ocultar</span>
+              <span className="sr-only group-data-[state=collapsed]:hidden">Ocultar barra lateral</span>
               <span className="sr-only group-data-[state=expanded]:hidden">Mostrar barra lateral</span>
           </Button>
         </SidebarFooter>
