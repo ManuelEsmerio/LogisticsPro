@@ -26,31 +26,35 @@ function simpleHash(str: string): number {
 
 function generateMockCoordinates(address: string) {
     const hash = simpleHash(address);
-    // Use different base coordinates for more variety
-    const latBase = 40.7128 + ((simpleHash(address) % 100) - 50) / 100; // NYC area with more spread
-    const lngBase = -74.0060 + ((simpleHash(address.split("").reverse().join("")) % 100) - 50) / 100;
-    const lat = latBase + (hash % 1000) / 50000;
-    const lng = lngBase + (((hash / 1000) | 0) % 1000) / 50000;
+    // Base coordinates for Tequila, Jalisco
+    const latBase = 20.8833;
+    const lngBase = -103.8333;
+    
+    // Generate small variations to simulate different locations within the town
+    // The spread is about +/- 0.04 degrees, which is roughly +/- 4.4 km
+    const lat = latBase + ((hash % 800) - 400) / 10000; 
+    const lng = lngBase + ((((hash * 7) / 13 | 0) % 800) - 400) / 10000;
     return { latitude: parseFloat(lat.toFixed(6)), longitude: parseFloat(lng.toFixed(6)) };
 }
 
 const addresses = [
-    'Calle de Alcalá, 28014 Madrid, España',
-    'Passeig de Gràcia, 92, 08008 Barcelona, España',
-    'Avenida de la Constitución, 41004 Sevilla, España',
-    'Calle de la Paz, 46003 Valencia, España',
-    'Gran Vía, 28013 Madrid, España',
-    'Avenida de los Insurgentes Sur 1581, Ciudad de México, CDMX, México',
-    'Paseo de la Reforma 222, Juárez, 06600 Ciudad de México, CDMX, México',
-    'Avenida Corrientes 1343, C1043 ABE, Buenos Aires, Argentina',
-    'Calle 72 #10-34, Bogotá, Colombia',
-    'Avenida Paulista 1578, São Paulo, SP, Brasil',
-    'Plaza de Armas, Santiago, Región Metropolitana, Chile'
+    'Calle Jose Cuervo 5, Centro, Tequila, Jalisco',
+    'Calle Sixto Gorjón 10, Centro, Tequila, Jalisco',
+    'Calle Juarez 114, Centro, Tequila, Jalisco',
+    'Calle Ramon Corona 25, Centro, Tequila, Jalisco',
+    'Calle Hidalgo 73, Centro, Tequila, Jalisco',
+    'Calle Zaragoza 32, Centro, Tequila, Jalisco',
+    'Calle Abasolo 55, Centro, Tequila, Jalisco',
+    'Calle Morelos 12, La Villa, Tequila, Jalisco',
+    'Calle Ocampo 9, El Calvario, Tequila, Jalisco',
+    'Calle de la Cruz 22, El Calvario, Tequila, Jalisco',
+    'Calle Tabasco 58, Buenos Aires, Tequila, Jalisco',
+    'Calle Albino Rojas 15, El Rastro, Tequila, Jalisco'
 ];
 
 const recipientNames = [
-    'Sofía García', 'Mateo Hernández', 'Valentina Martínez', 'Santiago López', 'Isabella González',
-    'Sebastián Pérez', 'Camila Rodríguez', 'Matías Sánchez', 'Valeria Ramírez', 'Daniel Gómez'
+    'Alejandro Fernández', 'Mariana Rodríguez', 'Javier Gómez', 'Ximena Pérez', 'Carlos Martínez',
+    'Guadalupe Sánchez', 'Miguel Ángel Torres', 'Sofía Ramírez', 'Diego Flores', 'Lucía Vázquez'
 ];
 
 
@@ -66,7 +70,7 @@ for (let i = 1; i <= 100; i++) {
         orderNumber: `ORD-${String(i).padStart(3, '0')}`,
         address,
         recipientName: recipientNames[i % recipientNames.length],
-        contactNumber: `555-${String(i).padStart(4, '0')}`,
+        contactNumber: `333-${String(i).padStart(4, '0')}`,
         deliveryType: deliveryTypes[i % deliveryTypes.length],
         paymentStatus: paymentStatuses[i % paymentStatuses.length],
         deliveryTimeSlot: timeSlots[i % timeSlots.length],
