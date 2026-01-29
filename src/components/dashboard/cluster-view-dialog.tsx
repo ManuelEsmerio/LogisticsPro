@@ -80,7 +80,7 @@ export function ClusterViewDialog() {
                         Select a time slot to group delivery orders by geographic proximity.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="space-y-4 overflow-y-auto max-h-[calc(80vh-150px)] pr-4">
                     <Select onValueChange={handleTimeSlotChange}>
                         <SelectTrigger className="w-[280px]">
                             <SelectValue placeholder="Select a time slot" />

@@ -119,7 +119,8 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="space-y-4 overflow-y-auto pr-4 max-h-[calc(80vh-200px)]">
                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="orderNumber" render={({ field }) => (
                         <FormItem>
@@ -229,8 +230,9 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
                         </FormItem>
                     )} />
                 )}
+                </div>
 
-                <DialogFooter>
+                <DialogFooter className="pt-4">
                     <Button type="submit" disabled={isPending}>
                         {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Save changes
