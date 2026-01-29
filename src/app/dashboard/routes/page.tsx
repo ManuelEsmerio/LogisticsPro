@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import {
   Select,
   SelectContent,
@@ -13,6 +13,7 @@ import { getClusteredRoutesAction } from '@/lib/actions';
 import type { ClusteredRoute, StaffMember } from '@/lib/definitions';
 import { Loader2, X, UserCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const clusterColors = [
     '#3b82f6', // blue-500
@@ -25,12 +26,17 @@ const clusterColors = [
 ];
 
 export default function RoutesPage() {
+    const [isMounted, setIsMounted] = useState(false);
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
     const [timeSlot, setTimeSlot] = useState<'morning' | 'afternoon' | 'evening' | null>(null);
     const [clusters, setClusters] = useState<ClusteredRoute[]>([]);
     const [staff, setStaff] = useState<StaffMember[]>([]);
     const [assignedDrivers, setAssignedDrivers] = useState<Record<number, string>>({});
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     const handleTimeSlotChange = (value: 'morning' | 'afternoon' | 'evening') => {
         setTimeSlot(value);
@@ -90,6 +96,23 @@ export default function RoutesPage() {
         const top = ((boundingBox.maxLat - lat) / (boundingBox.maxLat - boundingBox.minLat)) * 100;
         const left = ((lng - boundingBox.minLng) / (boundingBox.maxLng - boundingBox.minLng)) * 100;
         return { top: `${top}%`, left: `${left}%` };
+    }
+
+    if (!isMounted) {
+        return (
+             <div className="flex flex-col gap-4 h-full">
+                <h1 className="font-headline text-lg font-semibold md:text-2xl">
+                    Agrupación y Asignación de Rutas con IA
+                </h1>
+                <div className="flex flex-1 flex-col gap-4 rounded-lg border p-4 shadow-sm">
+                    <p className="text-muted-foreground">
+                        Selecciona un horario para agrupar los pedidos y asignarlos a los transportistas.
+                    </p>
+                    <Skeleton className="h-10 w-full sm:w-[280px]" />
+                    <Skeleton className="relative w-full h-96 rounded-lg" />
+                </div>
+            </div>
+        );
     }
 
     return (
