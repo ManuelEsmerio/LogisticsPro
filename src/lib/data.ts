@@ -14,42 +14,30 @@ let staff: StaffMember[] = [
 
 
 // Helper functions to generate mock data
-function simpleHash(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0; // Convert to 32bit integer
-  }
-  return hash;
-}
+// Define some cluster centers in Tequila, Jalisco
+const clusterCenters = [
+    { name: 'Centro Histórico', lat: 20.8833, lng: -103.8360 }, // Downtown
+    { name: 'La Villa', lat: 20.8875, lng: -103.8310 }, // North-East
+    { name: 'El Calvario', lat: 20.8790, lng: -103.8400 }, // South-West
+    { name: 'Buenos Aires', lat: 20.8890, lng: -103.8450 } // North-West
+];
 
-function generateMockCoordinates(address: string) {
-    const hash = simpleHash(address);
-    // Base coordinates for Tequila, Jalisco
-    const latBase = 20.8833;
-    const lngBase = -103.8333;
-    
-    // Generate small variations to simulate different locations within the town
-    // The spread is about +/- 0.04 degrees, which is roughly +/- 4.4 km
-    const lat = latBase + ((hash % 800) - 400) / 10000; 
-    const lng = lngBase + ((((hash * 7) / 13 | 0) % 800) - 400) / 10000;
-    return { latitude: parseFloat(lat.toFixed(6)), longitude: parseFloat(lng.toFixed(6)) };
+// Function to generate a coordinate near a cluster center
+function generateClusteredCoordinates(cluster: { lat: number, lng: number }, seed: number) {
+    // Smaller variation for tighter clusters, based on a seed
+    const latVariation = ((seed * 3) % 40 - 20) / 20000; // ~ +/- 100 meters
+    const lngVariation = ((seed * 7) % 40 - 20) / 20000; // ~ +/- 100 meters
+    return {
+        latitude: parseFloat((cluster.lat + latVariation).toFixed(6)),
+        longitude: parseFloat((cluster.lng + lngVariation).toFixed(6))
+    };
 }
 
 const addresses = [
-    'Calle Jose Cuervo 5, Centro, Tequila, Jalisco',
-    'Calle Sixto Gorjón 10, Centro, Tequila, Jalisco',
-    'Calle Juarez 114, Centro, Tequila, Jalisco',
-    'Calle Ramon Corona 25, Centro, Tequila, Jalisco',
-    'Calle Hidalgo 73, Centro, Tequila, Jalisco',
-    'Calle Zaragoza 32, Centro, Tequila, Jalisco',
-    'Calle Abasolo 55, Centro, Tequila, Jalisco',
-    'Calle Morelos 12, La Villa, Tequila, Jalisco',
-    'Calle Ocampo 9, El Calvario, Tequila, Jalisco',
-    'Calle de la Cruz 22, El Calvario, Tequila, Jalisco',
-    'Calle Tabasco 58, Buenos Aires, Tequila, Jalisco',
-    'Calle Albino Rojas 15, El Rastro, Tequila, Jalisco'
+    'Calle Jose Cuervo 5, Centro', 'Calle Sixto Gorjón 10, Centro', 'Calle Juarez 114, Centro',
+    'Calle Ramon Corona 25, Centro', 'Calle Hidalgo 73, Centro', 'Calle Zaragoza 32, Centro',
+    'Calle Abasolo 55, La Villa', 'Calle Morelos 12, La Villa', 'Calle Ocampo 9, El Calvario',
+    'Calle de la Cruz 22, El Calvario', 'Calle Tabasco 58, Buenos Aires', 'Calle Albino Rojas 15, Buenos Aires'
 ];
 
 const recipientNames = [
@@ -63,14 +51,17 @@ const paymentStatuses: Array<'paid' | 'due'> = ['paid', 'due'];
 const deliveryTypes: Array<'delivery' | 'pickup'> = ['delivery', 'pickup'];
 
 for (let i = 1; i <= 100; i++) {
-    const address = addresses[i % addresses.length];
-    const { latitude, longitude } = generateMockCoordinates(address + i); // add i to vary coords
+    // Assign each order to a cluster to ensure they are grouped
+    const cluster = clusterCenters[i % clusterCenters.length];
+    const { latitude, longitude } = generateClusteredCoordinates(cluster, i); 
+    const address = `${addresses[i % addresses.length]}, Tequila, Jalisco`;
+    
     orders.push({
         id: String(i),
         orderNumber: `ORD-${String(i).padStart(3, '0')}`,
         address,
         recipientName: recipientNames[i % recipientNames.length],
-        contactNumber: `333-${String(i).padStart(4, '0')}`,
+        contactNumber: `333-123-${String(i).padStart(4, '0')}`,
         deliveryType: deliveryTypes[i % deliveryTypes.length],
         paymentStatus: paymentStatuses[i % paymentStatuses.length],
         deliveryTimeSlot: timeSlots[i % timeSlots.length],
@@ -102,7 +93,7 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'createdAt'>): Prom
     id: String(Date.now()),
     createdAt: new Date(),
   };
-  orders.push(newOrder);
+  orders.unshift(newOrder);
   return newOrder;
 }
 

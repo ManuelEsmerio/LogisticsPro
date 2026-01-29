@@ -7,6 +7,16 @@ import { addOrder, deleteOrder, getOrders, updateOrder, addStaff, updateStaff, d
 import { orderSchema, staffMemberSchema, type Order, type OrderFormValues, type StaffMemberFormValues } from "@/lib/definitions";
 import { clusterRoutes } from "@/ai/flows/cluster-routes";
 
+// --- Improved Mock Geocoding ---
+
+// Define some cluster centers in Tequila, Jalisco
+const clusterCenters = [
+    { name: 'Centro Histórico', lat: 20.8833, lng: -103.8360 }, // Downtown
+    { name: 'La Villa', lat: 20.8875, lng: -103.8310 }, // North-East
+    { name: 'El Calvario', lat: 20.8790, lng: -103.8400 }, // South-West
+    { name: 'Buenos Aires', lat: 20.8890, lng: -103.8450 } // North-West
+];
+
 function simpleHash(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -14,16 +24,23 @@ function simpleHash(str: string): number {
     hash = (hash << 5) - hash + char;
     hash |= 0; // Convert to 32bit integer
   }
-  return hash;
+  return Math.abs(hash);
 }
 
-function generateMockCoordinates(address: string) {
+// Assigns an address to a deterministic cluster and generates coordinates
+function generateClusteredCoordinates(address: string) {
     const hash = simpleHash(address);
-    const latBase = 40.7128;
-    const lngBase = -74.0060;
-    const lat = latBase + (hash % 10000) / 50000;
-    const lng = lngBase + (((hash / 10000) | 0) % 10000) / 50000;
-    return { latitude: parseFloat(lat.toFixed(6)), longitude: parseFloat(lng.toFixed(6)) };
+    // Assign to a cluster based on the hash
+    const cluster = clusterCenters[hash % clusterCenters.length];
+
+    // Smaller variation for tighter clusters
+    const latVariation = ((hash * 3) % 40 - 20) / 20000; // ~ +/- 100 meters
+    const lngVariation = ((hash * 7) % 40 - 20) / 20000; // ~ +/- 100 meters
+
+    return {
+        latitude: parseFloat((cluster.lat + latVariation).toFixed(6)),
+        longitude: parseFloat((cluster.lng + lngVariation).toFixed(6))
+    };
 }
 
 
@@ -39,9 +56,8 @@ export async function saveOrder(data: OrderFormValues) {
   
   const { id, deliveryTimeType, ...orderData } = validatedFields.data;
 
-  // In a real app, you'd use a geocoding service here.
-  // For this demo, we generate mock coordinates based on the address.
-  const { latitude, longitude } = generateMockCoordinates(orderData.address);
+  // Use the new clustered coordinate generation
+  const { latitude, longitude } = generateClusteredCoordinates(orderData.address);
 
   try {
     if (id) {
