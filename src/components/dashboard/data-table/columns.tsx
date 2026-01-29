@@ -1,6 +1,6 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, Row } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { useState, useEffect } from "react";
 
@@ -10,14 +10,14 @@ import type { Order } from "@/lib/definitions";
 import { DataTableRowActions } from "./data-table-row-actions";
 import { cn } from "@/lib/utils";
 
-const DeliveryTypeCell = ({ row }: { row: any }) => {
+const DeliveryTypeCell = ({ row }: { row: Row<Order> }) => {
   const type: Order['deliveryType'] = row.getValue("deliveryType");
   const variant = type === "delivery" ? "default" : "secondary";
   const label = type === 'delivery' ? 'envío' : 'recogida';
   return <Badge variant={variant} className="capitalize">{label}</Badge>;
 };
 
-const PaymentStatusCell = ({ row }: { row: any }) => {
+const PaymentStatusCell = ({ row }: { row: Row<Order> }) => {
   const status: Order['paymentStatus'] = row.getValue("paymentStatus");
   const label = status === 'paid' ? 'pagado' : 'pendiente';
   return (
@@ -31,7 +31,7 @@ const PaymentStatusCell = ({ row }: { row: any }) => {
   );
 };
 
-const DeliveryTimeCell = ({ row }: { row: any }) => {
+const DeliveryTimeCell = ({ row }: { row: Row<Order> }) => {
   const timeSlot: Order['deliveryTimeSlot'] = row.getValue("deliveryTimeSlot");
   const exactTime: Order['deliveryTime'] = row.original.deliveryTime;
   const [formattedDate, setFormattedDate] = useState("");

@@ -123,7 +123,7 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <ScrollArea className="h-96 pr-6">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField control={form.control} name="orderNumber" render={({ field }) => (
                           <FormItem>
                               <FormLabel>Número de Pedido</FormLabel>
@@ -153,7 +153,7 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
                           <FormMessage />
                       </FormItem>
                   )} />
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField control={form.control} name="deliveryType" render={({ field }) => (
                           <FormItem>
                               <FormLabel>Tipo de Entrega</FormLabel>

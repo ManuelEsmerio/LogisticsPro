@@ -102,7 +102,7 @@ export default function RoutesPage() {
                     Selecciona un horario para agrupar los pedidos y asignarlos a los transportistas.
                 </p>
                 <Select onValueChange={handleTimeSlotChange} disabled={isPending}>
-                    <SelectTrigger className="w-[280px]">
+                    <SelectTrigger className="w-full sm:w-[280px]">
                         <SelectValue placeholder="Selecciona un horario" />
                     </SelectTrigger>
                     <SelectContent>
@@ -146,7 +146,7 @@ export default function RoutesPage() {
                 <div className="space-y-4">
                     {clusters.map((cluster, index) => (
                         <div key={index} className="p-4 border rounded-lg space-y-3">
-                             <div className="flex justify-between items-center">
+                             <div className="flex justify-between items-center flex-wrap gap-4">
                                 <h3 className="font-semibold flex items-center text-lg">
                                     <span className="h-4 w-4 rounded-full mr-3" style={{ backgroundColor: clusterColors[index % clusterColors.length] }} />
                                     Grupo {index + 1}
@@ -157,9 +157,9 @@ export default function RoutesPage() {
                                         Asignado a {assignedDrivers[index]}
                                      </div>
                                 ) : (
-                                    <Select onValueChange={(driverName) => handleAssignDriver(index, driverName)}>
-                                        <SelectTrigger className="w-[220px]">
-                                            <SelectValue placeholder="Asignar un conductor" />
+                                    <Select onValueChange={(driverName) => handleAssignDriver(index, driverName)} disabled={staff.length === 0}>
+                                        <SelectTrigger className="w-full sm:w-[220px]">
+                                            <SelectValue placeholder={staff.length > 0 ? "Asignar un conductor" : "No hay conductores"} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {staff.map(driver => (
