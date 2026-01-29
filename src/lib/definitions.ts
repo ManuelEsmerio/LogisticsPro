@@ -55,8 +55,6 @@ export type ClusteredRoute = {
 export const staffMemberSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, "Name is required"),
-  phone: z.string().min(1, "Phone number is required"),
-  vehicleId: z.string().min(1, "Vehicle ID is required"),
 });
 
 export type StaffMemberFormValues = z.infer<typeof staffMemberSchema>;
@@ -64,7 +62,5 @@ export type StaffMemberFormValues = z.infer<typeof staffMemberSchema>;
 export type StaffMember = {
   id: string;
   name: string;
-  phone: string;
-  vehicleId: string;
   createdAt: Date;
 };

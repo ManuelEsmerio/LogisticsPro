@@ -32,14 +32,6 @@ export const columns: ColumnDef<StaffMember>[] = [
     header: "Name",
   },
   {
-    accessorKey: "phone",
-    header: "Phone",
-  },
-  {
-    accessorKey: "vehicleId",
-    header: "Vehicle ID",
-  },
-  {
     accessorKey: "createdAt",
     header: "Created At",
     cell: ({ row }) => format(new Date(row.getValue("createdAt")), "PP"),

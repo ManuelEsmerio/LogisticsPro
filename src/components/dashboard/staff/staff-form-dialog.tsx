@@ -45,8 +45,6 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
         defaultValues: {
           id: staffMember?.id,
           name: staffMember?.name || "",
-          phone: staffMember?.phone || "",
-          vehicleId: staffMember?.vehicleId || "",
         },
     });
 
@@ -95,20 +93,6 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
                 <FormField control={form.control} name="name" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Name</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="phone" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="vehicleId" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Vehicle ID</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                         <FormMessage />
                     </FormItem>

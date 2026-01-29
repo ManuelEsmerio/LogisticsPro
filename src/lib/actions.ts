@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { addOrder, deleteOrder, getOrders, updateOrder, addStaff, updateStaff, deleteStaff } from "@/lib/data";
+import { addOrder, deleteOrder, getOrders, updateOrder, addStaff, updateStaff, deleteStaff, getStaff } from "@/lib/data";
 import { orderSchema, staffMemberSchema, type Order, type OrderFormValues, type StaffMemberFormValues } from "@/lib/definitions";
 import { clusterRoutes } from "@/ai/flows/cluster-routes";
 
@@ -82,11 +82,11 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
             }));
         
         if (deliveryOrders.length === 0) {
-            return { clusteredRoutes: [] };
+            return { clusteredRoutes: [], staff: await getStaff() };
         }
 
         const result = await clusterRoutes({ orders: deliveryOrders });
-        return result;
+        return { clusteredRoutes: result.clusteredRoutes, staff: await getStaff() };
 
     } catch (error) {
         console.error(error);
