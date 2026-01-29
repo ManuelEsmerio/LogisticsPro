@@ -2,6 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
+import { useState, useEffect } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,12 +32,19 @@ const PaymentStatusCell = ({ row }: { row: any }) => {
 const DeliveryTimeCell = ({ row }: { row: any }) => {
   const timeSlot: Order['deliveryTimeSlot'] = row.getValue("deliveryTimeSlot");
   const exactTime: Order['deliveryTime'] = row.original.deliveryTime;
+  const [formattedDate, setFormattedDate] = useState("");
+
+  useEffect(() => {
+    if (exactTime) {
+      setFormattedDate(format(new Date(exactTime), "PPp"));
+    }
+  }, [exactTime]);
 
   if (timeSlot) {
     return <span className="capitalize">{timeSlot}</span>;
   }
   if (exactTime) {
-    return <span>{format(new Date(exactTime), "PPp")}</span>;
+    return <span>{formattedDate}</span>;
   }
   return <span className="text-muted-foreground">N/A</span>;
 };
