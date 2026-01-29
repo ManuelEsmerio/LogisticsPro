@@ -19,7 +19,7 @@ export function StaffDataTableToolbar<TData extends StaffMember>({
       </div>
       <div className="flex items-center space-x-2">
         <StaffFormDialog>
-            <span className="hidden sm:inline">Create Staff</span>
+            <span className="hidden sm:inline">Crear Personal</span>
         </StaffFormDialog>
       </div>
     </div>

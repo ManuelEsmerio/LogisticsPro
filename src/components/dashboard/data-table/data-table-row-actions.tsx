@@ -27,7 +27,7 @@ import {
 import { deleteOrderAction } from "@/lib/actions"
 import { useToast } from "@/hooks/use-toast"
 
-interface DataTableRowActionsProps<TData> {
+interface DataTableRowActionsProps<TData extends Order> {
   row: Row<TData>
 }
 
@@ -40,7 +40,7 @@ export function DataTableRowActions<TData extends Order>({
   const handleDelete = async () => {
     const result = await deleteOrderAction(row.original.id);
     if (result.message) {
-      toast({ title: "Success", description: result.message });
+      toast({ title: "Éxito", description: result.message });
     } else {
       toast({ variant: "destructive", title: "Error", description: result.message });
     }
@@ -56,16 +56,16 @@ export function DataTableRowActions<TData extends Order>({
             className="flex h-8 w-8 p-0 data-[state=open]:bg-muted"
           >
             <MoreHorizontal className="h-4 w-4" />
-            <span className="sr-only">Open menu</span>
+            <span className="sr-only">Abrir menú</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[160px]">
           <OrderFormDialog order={row.original} isEditMode>
-             <span className="w-full text-left">Edit</span>
+             <span className="w-full text-left">Editar</span>
           </OrderFormDialog>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive">
-            Delete
+            Eliminar
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -73,14 +73,14 @@ export function DataTableRowActions<TData extends Order>({
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the order <span className="font-semibold">{row.original.orderNumber}</span>.
+              Esta acción no se puede deshacer. Esto eliminará permanentemente el pedido <span className="font-semibold">{row.original.orderNumber}</span>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Eliminar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

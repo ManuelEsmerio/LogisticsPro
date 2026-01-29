@@ -83,7 +83,7 @@ export function StaffDataTable<TData extends StaffMember, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  Sin resultados.
                 </TableCell>
               </TableRow>
             )}

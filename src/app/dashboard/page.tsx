@@ -9,7 +9,7 @@ export default async function DashboardPage() {
     <>
       <div className="flex items-center">
         <h1 className="font-headline text-lg font-semibold md:text-2xl">
-          Orders
+          Pedidos
         </h1>
       </div>
       <div

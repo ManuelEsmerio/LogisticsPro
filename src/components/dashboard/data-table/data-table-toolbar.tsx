@@ -19,7 +19,7 @@ export function DataTableToolbar<TData extends Order>({
       </div>
       <div className="flex items-center space-x-2">
         <OrderFormDialog>
-            <span className="hidden sm:inline">Create Order</span>
+            <span className="hidden sm:inline">Crear Pedido</span>
         </OrderFormDialog>
       </div>
     </div>

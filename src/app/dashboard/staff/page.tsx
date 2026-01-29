@@ -9,7 +9,7 @@ export default async function StaffPage() {
     <>
       <div className="flex items-center">
         <h1 className="font-headline text-lg font-semibold md:text-2xl">
-          Staff
+          Personal
         </h1>
       </div>
       <div

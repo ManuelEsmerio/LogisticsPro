@@ -13,18 +13,20 @@ import { cn } from "@/lib/utils";
 const DeliveryTypeCell = ({ row }: { row: any }) => {
   const type: Order['deliveryType'] = row.getValue("deliveryType");
   const variant = type === "delivery" ? "default" : "secondary";
-  return <Badge variant={variant} className="capitalize">{type}</Badge>;
+  const label = type === 'delivery' ? 'envío' : 'recogida';
+  return <Badge variant={variant} className="capitalize">{label}</Badge>;
 };
 
 const PaymentStatusCell = ({ row }: { row: any }) => {
   const status: Order['paymentStatus'] = row.getValue("paymentStatus");
+  const label = status === 'paid' ? 'pagado' : 'pendiente';
   return (
     <div className="flex items-center space-x-2">
       <span className={cn(
         "h-2 w-2 rounded-full",
         status === "paid" ? "bg-green-500" : "bg-yellow-500"
       )} />
-      <span className="capitalize">{status}</span>
+      <span className="capitalize">{label}</span>
     </div>
   );
 };
@@ -36,12 +38,18 @@ const DeliveryTimeCell = ({ row }: { row: any }) => {
 
   useEffect(() => {
     if (exactTime) {
+      // Use client-side rendering to format date and avoid hydration mismatch
       setFormattedDate(format(new Date(exactTime), "PPp"));
     }
   }, [exactTime]);
 
   if (timeSlot) {
-    return <span className="capitalize">{timeSlot}</span>;
+    const timeSlotLabels = {
+        morning: 'Mañana',
+        afternoon: 'Tarde',
+        evening: 'Noche'
+    };
+    return <span className="capitalize">{timeSlotLabels[timeSlot]}</span>;
   }
   if (exactTime) {
     return <span>{formattedDate}</span>;
@@ -57,14 +65,14 @@ export const columns: ColumnDef<Order>[] = [
       <Checkbox
         checked={table.getIsAllPageRowsSelected()}
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
+        aria-label="Seleccionar todo"
       />
     ),
     cell: ({ row }) => (
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
+        aria-label="Seleccionar fila"
       />
     ),
     enableSorting: false,
@@ -72,35 +80,35 @@ export const columns: ColumnDef<Order>[] = [
   },
   {
     accessorKey: "orderNumber",
-    header: "Order #",
+    header: "Pedido #",
   },
   {
     accessorKey: "recipientName",
-    header: "Recipient",
+    header: "Destinatario",
   },
   {
     accessorKey: "address",
-    header: "Address",
+    header: "Dirección",
     cell: ({ row }) => <div className="max-w-[200px] truncate">{row.getValue("address")}</div>
   },
   {
     accessorKey: "deliveryType",
-    header: "Type",
+    header: "Tipo",
     cell: DeliveryTypeCell
   },
   {
     accessorKey: "paymentStatus",
-    header: "Payment",
+    header: "Pago",
     cell: PaymentStatusCell
   },
   {
     accessorKey: "deliveryTimeSlot",
-    header: "Delivery Time",
+    header: "Hora de Entrega",
     cell: DeliveryTimeCell
   },
   {
     accessorKey: "createdAt",
-    header: "Created At",
+    header: "Fecha de Creación",
     cell: ({ row }) => format(new Date(row.getValue("createdAt")), "PP"),
   },
   {

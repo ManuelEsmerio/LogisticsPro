@@ -32,7 +32,7 @@ export async function saveOrder(data: OrderFormValues) {
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Missing Fields. Failed to save order.",
+      message: "Campos incompletos. No se pudo guardar el pedido.",
     };
   }
   
@@ -49,11 +49,11 @@ export async function saveOrder(data: OrderFormValues) {
       await addOrder({ ...orderData, latitude, longitude });
     }
   } catch (error) {
-    return { message: "Database Error: Failed to save order." };
+    return { message: "Error de base de datos: No se pudo guardar el pedido." };
   }
 
   revalidatePath("/dashboard");
-  return { message: `Successfully ${id ? 'updated' : 'created'} order.` };
+  return { message: `Pedido ${id ? 'actualizado' : 'creado'} con éxito.` };
 }
 
 
@@ -61,9 +61,9 @@ export async function deleteOrderAction(id: string) {
     try {
         await deleteOrder(id);
         revalidatePath('/dashboard');
-        return { message: 'Deleted Order.' };
+        return { message: 'Pedido eliminado.' };
     } catch (error) {
-        return { message: 'Database Error: Failed to Delete Order.' };
+        return { message: 'Error de base de datos: No se pudo eliminar el pedido.' };
     }
 }
 
@@ -90,7 +90,7 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
 
     } catch (error) {
         console.error(error);
-        return { error: 'Failed to get clustered routes.' };
+        return { error: 'No se pudieron obtener las rutas agrupadas.' };
     }
 }
 
@@ -100,7 +100,7 @@ export async function saveStaff(data: StaffMemberFormValues) {
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Missing Fields. Failed to save staff member.",
+      message: "Campos incompletos. No se pudo guardar el miembro del personal.",
     };
   }
   
@@ -113,19 +113,19 @@ export async function saveStaff(data: StaffMemberFormValues) {
       await addStaff(staffData);
     }
   } catch (error) {
-    return { message: "Database Error: Failed to save staff member." };
+    return { message: "Error de base de datos: No se pudo guardar el miembro del personal." };
   }
 
   revalidatePath("/dashboard/staff");
-  return { message: `Successfully ${id ? 'updated' : 'created'} staff member.` };
+  return { message: `Miembro del personal ${id ? 'actualizado' : 'creado'} con éxito.` };
 }
 
 export async function deleteStaffAction(id: string) {
     try {
         await deleteStaff(id);
         revalidatePath('/dashboard/staff');
-        return { message: 'Deleted Staff Member.' };
+        return { message: 'Miembro del personal eliminado.' };
     } catch (error) {
-        return { message: 'Database Error: Failed to Delete Staff Member.' };
+        return { message: 'Error de base de datos: No se pudo eliminar al miembro del personal.' };
     }
 }

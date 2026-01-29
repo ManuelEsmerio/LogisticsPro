@@ -5,9 +5,11 @@ let orders: Order[] = [];
 
 // In-memory store for staff
 let staff: StaffMember[] = [
-    { id: '1', name: 'Driver Dan', createdAt: new Date() },
-    { id: '2', name: 'Driver Dave', createdAt: new Date() },
-    { id: '3', name: 'Driver Diane', createdAt: new Date() },
+    { id: '1', name: 'Juan Pérez', createdAt: new Date() },
+    { id: '2', name: 'Ana Gómez', createdAt: new Date() },
+    { id: '3', name: 'Carlos Rodríguez', createdAt: new Date() },
+    { id: '4', name: 'Laura Fernández', createdAt: new Date() },
+    { id: '5', name: 'Miguel González', createdAt: new Date() },
 ];
 
 
@@ -33,17 +35,24 @@ function generateMockCoordinates(address: string) {
 }
 
 const addresses = [
-    '1600 Amphitheatre Parkway, Mountain View, CA',
-    '1 Infinite Loop, Cupertino, CA',
-    'Microsoft Campus, Redmond, WA',
-    '2121 N Clark St, Chicago, IL',
-    'Golden Gate Bridge, San Francisco, CA',
-    '350 5th Ave, New York, NY',
-    '1060 W Addison St, Chicago, IL',
-    '4059 Mt Lee Dr, Hollywood, CA',
-    '30 Rockefeller Plaza, New York, NY',
-    '221B Baker St, London, UK'
+    'Calle de Alcalá, 28014 Madrid, España',
+    'Passeig de Gràcia, 92, 08008 Barcelona, España',
+    'Avenida de la Constitución, 41004 Sevilla, España',
+    'Calle de la Paz, 46003 Valencia, España',
+    'Gran Vía, 28013 Madrid, España',
+    'Avenida de los Insurgentes Sur 1581, Ciudad de México, CDMX, México',
+    'Paseo de la Reforma 222, Juárez, 06600 Ciudad de México, CDMX, México',
+    'Avenida Corrientes 1343, C1043 ABE, Buenos Aires, Argentina',
+    'Calle 72 #10-34, Bogotá, Colombia',
+    'Avenida Paulista 1578, São Paulo, SP, Brasil',
+    'Plaza de Armas, Santiago, Región Metropolitana, Chile'
 ];
+
+const recipientNames = [
+    'Sofía García', 'Mateo Hernández', 'Valentina Martínez', 'Santiago López', 'Isabella González',
+    'Sebastián Pérez', 'Camila Rodríguez', 'Matías Sánchez', 'Valeria Ramírez', 'Daniel Gómez'
+];
+
 
 const timeSlots: Array<'morning' | 'afternoon' | 'evening'> = ['morning', 'afternoon', 'evening'];
 const paymentStatuses: Array<'paid' | 'due'> = ['paid', 'due'];
@@ -56,7 +65,7 @@ for (let i = 1; i <= 100; i++) {
         id: String(i),
         orderNumber: `ORD-${String(i).padStart(3, '0')}`,
         address,
-        recipientName: `Customer ${i}`,
+        recipientName: recipientNames[i % recipientNames.length],
         contactNumber: `555-${String(i).padStart(4, '0')}`,
         deliveryType: deliveryTypes[i % deliveryTypes.length],
         paymentStatus: paymentStatuses[i % paymentStatuses.length],

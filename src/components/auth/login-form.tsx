@@ -28,10 +28,10 @@ import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   email: z.string().email({
-    message: "Please enter a valid email address.",
+    message: "Por favor, introduce una dirección de correo electrónico válida.",
   }),
   password: z.string().min(1, {
-    message: "Password is required.",
+    message: "La contraseña es obligatoria.",
   }),
 });
 
@@ -57,15 +57,15 @@ export function LoginForm() {
     // For this demo, we'll just check for a demo user.
     if (values.email === "admin@orderwise.com" && values.password === "password") {
       toast({
-        title: "Login Successful",
-        description: "Welcome back!",
+        title: "Inicio de Sesión Exitoso",
+        description: "¡Bienvenido de vuelta!",
       });
       router.push("/dashboard");
     } else {
        toast({
         variant: "destructive",
-        title: "Login Failed",
-        description: "Invalid email or password. Please try again.",
+        title: "Error de Inicio de Sesión",
+        description: "Correo o contraseña inválidos. Inténtalo de nuevo.",
       });
       setIsLoading(false);
     }
@@ -74,9 +74,9 @@ export function LoginForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline text-2xl">Welcome Back</CardTitle>
+        <CardTitle className="font-headline text-2xl">Bienvenido de Nuevo</CardTitle>
         <CardDescription>
-          Enter your credentials to access your dashboard.
+          Ingresa tus credenciales para acceder a tu panel.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -87,7 +87,7 @@ export function LoginForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Correo Electrónico</FormLabel>
                   <FormControl>
                     <Input placeholder="admin@orderwise.com" {...field} />
                   </FormControl>
@@ -100,7 +100,7 @@ export function LoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Contraseña</FormLabel>
                   <FormControl>
                     <Input type="password" placeholder="password" {...field} />
                   </FormControl>
@@ -110,7 +110,7 @@ export function LoginForm() {
             />
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Log In
+              Iniciar Sesión
             </Button>
           </form>
         </Form>

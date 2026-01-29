@@ -68,8 +68,8 @@ export default function RoutesPage() {
     const handleAssignDriver = (clusterIndex: number, driverName: string) => {
         setAssignedDrivers(prev => ({ ...prev, [clusterIndex]: driverName }));
         toast({
-            title: "Driver Assigned",
-            description: `${driverName} has been assigned to Cluster ${clusterIndex + 1}.`,
+            title: "Conductor Asignado",
+            description: `Se ha asignado a ${driverName} al Grupo ${clusterIndex + 1}.`,
         });
     };
 
@@ -93,22 +93,22 @@ export default function RoutesPage() {
     }
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 h-full">
             <h1 className="font-headline text-lg font-semibold md:text-2xl">
-                AI-Powered Route Clustering & Assignment
+                Agrupación y Asignación de Rutas con IA
             </h1>
             <div className="flex flex-1 flex-col gap-4 rounded-lg border p-4 shadow-sm">
                 <p className="text-muted-foreground">
-                    Select a time slot to group delivery orders and assign them to drivers.
+                    Selecciona un horario para agrupar los pedidos y asignarlos a los transportistas.
                 </p>
                 <Select onValueChange={handleTimeSlotChange} disabled={isPending}>
                     <SelectTrigger className="w-[280px]">
-                        <SelectValue placeholder="Select a time slot" />
+                        <SelectValue placeholder="Selecciona un horario" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="morning">Morning</SelectItem>
-                        <SelectItem value="afternoon">Afternoon</SelectItem>
-                        <SelectItem value="evening">Evening</SelectItem>
+                        <SelectItem value="morning">Mañana</SelectItem>
+                        <SelectItem value="afternoon">Tarde</SelectItem>
+                        <SelectItem value="evening">Noche</SelectItem>
                     </SelectContent>
                 </Select>
                 <div className="relative w-full h-96 rounded-lg bg-muted border overflow-hidden">
@@ -119,12 +119,12 @@ export default function RoutesPage() {
                     )}
                     {!isPending && timeSlot && clusters.length === 0 && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <p className="text-muted-foreground">No delivery orders found for this time slot.</p>
+                            <p className="text-muted-foreground">No se encontraron pedidos de entrega para este horario.</p>
                         </div>
                     )}
                      {!isPending && !timeSlot && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <p className="text-muted-foreground">Please select a time slot to see route clusters.</p>
+                            <p className="text-muted-foreground">Por favor, selecciona un horario para ver los grupos de rutas.</p>
                         </div>
                     )}
                     {clusters.map((cluster, clusterIndex) => (
@@ -149,17 +149,17 @@ export default function RoutesPage() {
                              <div className="flex justify-between items-center">
                                 <h3 className="font-semibold flex items-center text-lg">
                                     <span className="h-4 w-4 rounded-full mr-3" style={{ backgroundColor: clusterColors[index % clusterColors.length] }} />
-                                    Cluster {index + 1}
+                                    Grupo {index + 1}
                                 </h3>
                                 {assignedDrivers[index] ? (
-                                     <div className="flex items-center gap-2 text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full">
+                                     <div className="flex items-center gap-2 text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full dark:bg-green-900/50 dark:text-green-400">
                                         <UserCheck className="h-4 w-4" />
-                                        Assigned to {assignedDrivers[index]}
+                                        Asignado a {assignedDrivers[index]}
                                      </div>
                                 ) : (
                                     <Select onValueChange={(driverName) => handleAssignDriver(index, driverName)}>
                                         <SelectTrigger className="w-[220px]">
-                                            <SelectValue placeholder="Assign a driver" />
+                                            <SelectValue placeholder="Asignar un conductor" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {staff.map(driver => (

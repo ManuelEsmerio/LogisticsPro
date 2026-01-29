@@ -2,10 +2,10 @@ import { z } from "zod";
 
 export const orderSchema = z.object({
   id: z.string().optional(),
-  orderNumber: z.string().min(1, "Order number is required"),
-  address: z.string().min(1, "Address is required"),
-  recipientName: z.string().min(1, "Recipient name is required"),
-  contactNumber: z.string().min(1, "Contact number is required"),
+  orderNumber: z.string().min(1, "El número de pedido es obligatorio"),
+  address: z.string().min(1, "La dirección es obligatoria"),
+  recipientName: z.string().min(1, "El nombre del destinatario es obligatorio"),
+  contactNumber: z.string().min(1, "El número de contacto es obligatorio"),
   deliveryType: z.enum(["delivery", "pickup"]),
   paymentStatus: z.enum(["paid", "due"]),
   deliveryTimeType: z.enum(["timeslot", "exact_time"]),
@@ -17,7 +17,7 @@ export const orderSchema = z.object({
     }
     return true;
 }, {
-    message: "Time slot is required",
+    message: "La franja horaria es obligatoria",
     path: ["deliveryTimeSlot"],
 })
 .refine(data => {
@@ -26,7 +26,7 @@ export const orderSchema = z.object({
     }
     return true;
 }, {
-    message: "Exact time is required",
+    message: "La hora exacta es obligatoria",
     path: ["deliveryTime"],
 });
 
@@ -54,7 +54,7 @@ export type ClusteredRoute = {
 
 export const staffMemberSchema = z.object({
   id: z.string().optional(),
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "El nombre es obligatorio"),
 });
 
 export type StaffMemberFormValues = z.infer<typeof staffMemberSchema>;

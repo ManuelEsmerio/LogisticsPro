@@ -28,6 +28,7 @@ import { staffMemberSchema, type StaffMember, type StaffMemberFormValues } from 
 import { saveStaff } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface StaffFormDialogProps {
     staffMember?: StaffMember;
@@ -55,7 +56,7 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
                 // Handle validation errors if necessary
             } else {
                 toast({
-                    title: "Success",
+                    title: "Éxito",
                     description: result.message,
                 });
                 setOpen(false);
@@ -82,27 +83,28 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="font-headline">{isEditMode ? "Edit Staff Member" : "Create New Staff Member"}</DialogTitle>
+          <DialogTitle className="font-headline">{isEditMode ? "Editar Miembro del Personal" : "Crear Nuevo Miembro del Personal"}</DialogTitle>
           <DialogDescription>
-            Fill in the details below. Click save when you're done.
+            Completa los detalles a continuación. Haz clic en guardar cuando termines.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-              <div className="grid gap-4 py-4">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-              </div>
-
-              <DialogFooter>
+              <ScrollArea className="max-h-96 pr-6">
+                <div className="grid gap-4 py-4">
+                  <FormField control={form.control} name="name" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Nombre</FormLabel>
+                          <FormControl><Input {...field} /></FormControl>
+                          <FormMessage />
+                      </FormItem>
+                  )} />
+                </div>
+              </ScrollArea>
+              <DialogFooter className="pt-4">
                   <Button type="submit" disabled={isPending}>
                       {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Save changes
+                      Guardar cambios
                   </Button>
               </DialogFooter>
             </form>
