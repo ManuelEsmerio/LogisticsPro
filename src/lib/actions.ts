@@ -1,3 +1,4 @@
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -72,7 +73,7 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
     try {
         const allOrders = await getOrders();
         const deliveryOrders = allOrders
-            .filter(order => order.deliveryType === 'delivery' && order.deliveryTimeSlot === timeSlot)
+            .filter(order => order.deliveryType === 'delivery' && order.deliveryTimeSlot === timeSlot && order.paymentStatus === 'due')
             .map(order => ({
                 orderNumber: order.orderNumber,
                 address: order.address,
