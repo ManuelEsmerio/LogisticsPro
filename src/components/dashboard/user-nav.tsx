@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,20 +13,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { useRouter } from "next/navigation";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export function UserNav() {
   const router = useRouter();
   const avatarImage = PlaceHolderImages.find(p => p.id === 'user-avatar');
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) {
-    return <Skeleton className="h-9 w-9 rounded-full" />;
-  }
 
   return (
     <DropdownMenu>

@@ -1,6 +1,5 @@
 'use client';
 import { MainNav } from "@/components/dashboard/main-nav";
-import { UserNav } from "@/components/dashboard/user-nav";
 import Logo from "@/components/logo";
 import { Input } from "@/components/ui/input";
 import { ChevronsLeft, Search } from "lucide-react";
@@ -16,6 +15,13 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import dynamic from 'next/dynamic';
+import { Skeleton } from "@/components/ui/skeleton";
+
+const UserNav = dynamic(() => import('@/components/dashboard/user-nav').then(mod => mod.UserNav), {
+  ssr: false,
+  loading: () => <Skeleton className="h-8 w-8 rounded-full" />,
+});
 
 function DashboardLayoutContent({
   children,
@@ -39,8 +45,6 @@ function DashboardLayoutContent({
               onClick={toggleSidebar}
           >
               <ChevronsLeft className="shrink-0 size-4 transition-transform duration-200 group-data-[state=collapsed]:rotate-180" />
-              <span className="sr-only group-data-[state=collapsed]:hidden">Ocultar barra lateral</span>
-              <span className="sr-only group-data-[state=expanded]:hidden">Mostrar barra lateral</span>
           </Button>
         </SidebarFooter>
       </Sidebar>
