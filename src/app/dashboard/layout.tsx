@@ -3,7 +3,7 @@ import { MainNav } from "@/components/dashboard/main-nav";
 import { UserNav } from "@/components/dashboard/user-nav";
 import Logo from "@/components/logo";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { ChevronsLeft, Search } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   SidebarProvider,
@@ -12,16 +12,19 @@ import {
   SidebarContent,
   SidebarHeader,
   SidebarInset,
-  SidebarRail,
+  SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 
-export default function DashboardLayout({
+function DashboardLayoutContent({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { toggleSidebar } = useSidebar();
   return (
-    <SidebarProvider>
+    <>
       <Sidebar collapsible="icon">
         <SidebarHeader className="border-b justify-center">
             <Logo />
@@ -29,7 +32,17 @@ export default function DashboardLayout({
         <SidebarContent>
             <MainNav />
         </SidebarContent>
-        <SidebarRail />
+        <SidebarFooter className="mt-auto flex p-2 border-t">
+          <Button
+              variant="ghost"
+              className="w-full justify-start gap-2"
+              onClick={toggleSidebar}
+          >
+              <ChevronsLeft className="shrink-0 size-4 transition-transform duration-200 group-data-[state=collapsed]:rotate-180" />
+              <span className="group-data-[state=collapsed]:hidden">Ocultar</span>
+              <span className="sr-only group-data-[state=expanded]:hidden">Mostrar barra lateral</span>
+          </Button>
+        </SidebarFooter>
       </Sidebar>
       <SidebarInset>
         <div className="flex flex-col h-full">
@@ -55,6 +68,18 @@ export default function DashboardLayout({
           </main>
         </div>
       </SidebarInset>
+    </>
+  );
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <SidebarProvider>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
     </SidebarProvider>
   );
 }
