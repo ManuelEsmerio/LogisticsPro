@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const UserNav = dynamic(() => import('@/components/dashboard/user-nav').then(mod => mod.UserNav), {
   ssr: false,
-  loading: () => <Skeleton className="h-8 w-8 rounded-full" />,
+  loading: () => <Skeleton className="h-9 w-9 rounded-full" />,
 });
 
 function DashboardLayoutContent({
