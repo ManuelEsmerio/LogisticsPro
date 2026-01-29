@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { addOrder, deleteOrder, getOrders, updateOrder } from "@/lib/data";
-import { orderSchema, type Order, type OrderFormValues } from "@/lib/definitions";
+import { addOrder, deleteOrder, getOrders, updateOrder, addStaff, updateStaff, deleteStaff } from "@/lib/data";
+import { orderSchema, staffMemberSchema, type Order, type OrderFormValues, type StaffMemberFormValues } from "@/lib/definitions";
 import { clusterRoutes } from "@/ai/flows/cluster-routes";
 
 function simpleHash(str: string): number {
@@ -91,5 +91,41 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
     } catch (error) {
         console.error(error);
         return { error: 'Failed to get clustered routes.' };
+    }
+}
+
+export async function saveStaff(data: StaffMemberFormValues) {
+  const validatedFields = staffMemberSchema.safeParse(data);
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: "Missing Fields. Failed to save staff member.",
+    };
+  }
+  
+  const { id, ...staffData } = validatedFields.data;
+
+  try {
+    if (id) {
+      await updateStaff(id, staffData);
+    } else {
+      await addStaff(staffData);
+    }
+  } catch (error) {
+    return { message: "Database Error: Failed to save staff member." };
+  }
+
+  revalidatePath("/dashboard/staff");
+  return { message: `Successfully ${id ? 'updated' : 'created'} staff member.` };
+}
+
+export async function deleteStaffAction(id: string) {
+    try {
+        await deleteStaff(id);
+        revalidatePath('/dashboard/staff');
+        return { message: 'Deleted Staff Member.' };
+    } catch (error) {
+        return { message: 'Database Error: Failed to Delete Staff Member.' };
     }
 }

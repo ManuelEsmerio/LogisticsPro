@@ -51,3 +51,20 @@ export type ClusteredRoute = {
   timeSlot: 'morning' | 'afternoon' | 'evening';
   orders: Pick<Order, 'orderNumber' | 'address' | 'latitude' | 'longitude'>[];
 };
+
+export const staffMemberSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, "Name is required"),
+  phone: z.string().min(1, "Phone number is required"),
+  vehicleId: z.string().min(1, "Vehicle ID is required"),
+});
+
+export type StaffMemberFormValues = z.infer<typeof staffMemberSchema>;
+
+export type StaffMember = {
+  id: string;
+  name: string;
+  phone: string;
+  vehicleId: string;
+  createdAt: Date;
+};

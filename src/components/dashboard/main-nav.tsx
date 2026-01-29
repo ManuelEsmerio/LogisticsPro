@@ -2,16 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Package, Truck, Users } from "lucide-react";
+import { Package, Truck, Users } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 const navItems = [
-  { href: "/dashboard", icon: Home, label: "Dashboard" },
-  { href: "#", icon: Package, label: "Orders", badge: "6" },
-  { href: "#", icon: Truck, label: "Routes" },
-  { href: "#", icon: Users, label: "Customers" },
+  { href: "/dashboard", icon: Package, label: "Orders" },
+  { href: "/dashboard/routes", icon: Truck, label: "Routes" },
+  { href: "/dashboard/staff", icon: Users, label: "Staff" },
 ];
 
 export function MainNav({ isMobile = false }: { isMobile?: boolean }) {

@@ -1,14 +1,14 @@
 "use client"
 
 import { Table } from "@tanstack/react-table"
-import { OrderFormDialog } from "../order-form-dialog"
-import type { Order } from "@/lib/definitions"
+import { StaffFormDialog } from "./staff-form-dialog"
+import type { StaffMember } from "@/lib/definitions"
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>
 }
 
-export function DataTableToolbar<TData extends Order>({
+export function StaffDataTableToolbar<TData extends StaffMember>({
   table,
 }: DataTableToolbarProps<TData>) {
 
@@ -18,9 +18,9 @@ export function DataTableToolbar<TData extends Order>({
         {/* Input for filtering can be added here */}
       </div>
       <div className="flex items-center space-x-2">
-        <OrderFormDialog>
-            <span className="hidden sm:inline">Create Order</span>
-        </OrderFormDialog>
+        <StaffFormDialog>
+            <span className="hidden sm:inline">Create Staff</span>
+        </StaffFormDialog>
       </div>
     </div>
   )

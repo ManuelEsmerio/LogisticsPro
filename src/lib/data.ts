@@ -1,4 +1,4 @@
-import type { Order } from './definitions';
+import type { Order, StaffMember } from './definitions';
 
 // In-memory store for orders
 let orders: Order[] = [
@@ -113,4 +113,43 @@ export async function deleteOrder(id: string): Promise<boolean> {
   const initialLength = orders.length;
   orders = orders.filter(order => order.id !== id);
   return orders.length < initialLength;
+}
+
+// In-memory store for staff
+let staff: StaffMember[] = [
+    { id: '1', name: 'Driver Dan', phone: '555-0101', vehicleId: 'TRUCK-01', createdAt: new Date() },
+    { id: '2', name: 'Driver Dave', phone: '555-0102', vehicleId: 'VAN-02', createdAt: new Date() },
+];
+
+export async function getStaff(): Promise<StaffMember[]> {
+    await sleep(500);
+    return staff.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
+}
+
+export async function addStaff(staffData: Omit<StaffMember, 'id' | 'createdAt'>): Promise<StaffMember> {
+    await sleep(300);
+    const newStaffMember: StaffMember = {
+        ...staffData,
+        id: String(Date.now()),
+        createdAt: new Date(),
+    };
+    staff.push(newStaffMember);
+    return newStaffMember;
+}
+
+export async function updateStaff(id: string, updates: Partial<Omit<StaffMember, 'id' | 'createdAt'>>): Promise<StaffMember | null> {
+    await sleep(300);
+    const staffIndex = staff.findIndex(s => s.id === id);
+    if (staffIndex === -1) {
+        return null;
+    }
+    staff[staffIndex] = { ...staff[staffIndex], ...updates };
+    return staff[staffIndex];
+}
+
+export async function deleteStaff(id: string): Promise<boolean> {
+    await sleep(300);
+    const initialLength = staff.length;
+    staff = staff.filter(s => s.id !== id);
+    return staff.length < initialLength;
 }
