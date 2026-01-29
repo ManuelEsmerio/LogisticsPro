@@ -9,7 +9,7 @@ This project is scaffolded in Firebase Studio.
 - **Simple Authentication**: Secure login with email and password.
 - **Order Dashboard**: An interactive table to view, create, edit, and delete orders.
 - **Order Management**: Detailed order forms with fields for address, recipient, contact info, delivery type, payment status, and delivery time.
-- **Geocoding**: Automatic conversion of addresses to latitude and longitude coordinates.
+- **Geocoding**: Automatic conversion of addresses to latitude and longitude coordinates via Google Maps API.
 - **AI-Powered Route Clustering**: Intelligent grouping of delivery orders based on geographic proximity and time slots to optimize delivery routes.
 - **Clean UI/UX**: A modern interface built with TailwindCSS and shadcn/ui, featuring a professional color palette and typography.
 
@@ -23,22 +23,27 @@ Geocoding is the process of converting a physical address into geographic coordi
 
 **Implementation (`src/lib/actions.ts`):**
 
-In a production application, you would integrate a third-party geocoding service like the Google Maps Geocoding API or Mapbox Geocoding API.
+This application uses the **Google Maps Geocoding API** to perform address-to-coordinate conversion.
 
-The flow would be:
-1. When a user creates or updates an order, the server action receives the address.
-2. An API call is made to the chosen geocoding service with the address.
+**Setup:**
+1.  Enable the "Geocoding API" in your Google Cloud Platform project.
+2.  Create an API key and restrict it to the Geocoding API.
+3.  Add your API key to the `.env` file in the root of the project:
+    ```
+    GOOGLE_MAPS_API_KEY="YOUR_API_KEY_HERE"
+    ```
+
+**Flow:**
+1. When a user creates or updates an order, the `saveOrder` server action calls the `geocodeAddress` function with the provided address.
+2. An API call is made to the Google Maps Geocoding API.
 3. The service returns the latitude and longitude for that address.
 4. These coordinates are then saved to the database along with the rest of the order details.
 
-For this boilerplate, the geocoding is **simulated**. A deterministic hash function is used on the address string to generate consistent, mock coordinates within a predefined geographical area (e.g., New York City). This allows the route clustering feature to function without requiring an actual API key. You can find this logic in the `createOrder` and `updateOrder` functions in `src/lib/actions.ts`.
+If the API key is missing or the request fails, the application will fall back to default coordinates to prevent crashes.
 
 ```typescript
-// Example of where to integrate a real geocoding service
-// const { latitude, longitude } = await geocodeAddress(data.address);
-
-// The current simulated implementation
-const { latitude, longitude } = generateMockCoordinates(data.address);
+// src/lib/actions.ts
+const { latitude, longitude } = await geocodeAddress(orderData.address);
 ```
 
 ### Route Clustering Logic

@@ -7,40 +7,38 @@ import { addOrder, deleteOrder, getOrders, updateOrder, addStaff, updateStaff, d
 import { orderSchema, staffMemberSchema, type Order, type OrderFormValues, type StaffMemberFormValues } from "@/lib/definitions";
 import { clusterRoutes } from "@/ai/flows/cluster-routes";
 
-// --- Improved Mock Geocoding ---
+// --- Real Geocoding with Google Maps API ---
+async function geocodeAddress(address: string): Promise<{ latitude: number; longitude: number }> {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
-// Define some cluster centers in Tequila, Jalisco
-const clusterCenters = [
-    { name: 'Centro Histórico', lat: 20.8833, lng: -103.8360 }, // Downtown
-    { name: 'La Villa', lat: 20.8875, lng: -103.8310 }, // North-East
-    { name: 'El Calvario', lat: 20.8790, lng: -103.8400 }, // South-West
-    { name: 'Buenos Aires', lat: 20.8890, lng: -103.8450 } // North-West
-];
+    // Default coordinates for Tequila, Jalisco, if API key is missing or fails.
+    const fallbackCoordinates = { latitude: 20.8833, longitude: -103.8360 };
 
-function simpleHash(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0; // Convert to 32bit integer
-  }
-  return Math.abs(hash);
-}
+    if (!apiKey) {
+        console.warn("GOOGLE_MAPS_API_KEY is not set. Using fallback coordinates.");
+        return fallbackCoordinates;
+    }
 
-// Assigns an address to a deterministic cluster and generates coordinates
-function generateClusteredCoordinates(address: string) {
-    const hash = simpleHash(address);
-    // Assign to a cluster based on the hash
-    const cluster = clusterCenters[hash % clusterCenters.length];
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
 
-    // Smaller variation for tighter clusters
-    const latVariation = ((hash * 3) % 40 - 20) / 20000; // ~ +/- 100 meters
-    const lngVariation = ((hash * 7) % 40 - 20) / 20000; // ~ +/- 100 meters
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
 
-    return {
-        latitude: parseFloat((cluster.lat + latVariation).toFixed(6)),
-        longitude: parseFloat((cluster.lng + lngVariation).toFixed(6))
-    };
+        if (data.status === 'OK' && data.results[0]) {
+            const location = data.results[0].geometry.location;
+            return {
+                latitude: location.lat,
+                longitude: location.lng,
+            };
+        } else {
+            console.error('Geocoding failed:', data.status, data.error_message);
+            return fallbackCoordinates;
+        }
+    } catch (error) {
+        console.error('Error fetching from Geocoding API:', error);
+        return fallbackCoordinates;
+    }
 }
 
 
@@ -56,8 +54,8 @@ export async function saveOrder(data: OrderFormValues) {
   
   const { id, deliveryTimeType, ...orderData } = validatedFields.data;
 
-  // Use the new clustered coordinate generation
-  const { latitude, longitude } = generateClusteredCoordinates(orderData.address);
+  // Use real geocoding
+  const { latitude, longitude } = await geocodeAddress(orderData.address);
 
   try {
     if (id) {
