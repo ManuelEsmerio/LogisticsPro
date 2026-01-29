@@ -18,7 +18,7 @@ export function MainNav() {
     <SidebarMenu>
       {navItems.map(({ href, icon: Icon, label }) => (
         <SidebarMenuItem key={label}>
-          <Link href={href} legacyBehavior passHref>
+          <Link href={href}>
             <SidebarMenuButton
               isActive={pathname === href}
               tooltip={label}
