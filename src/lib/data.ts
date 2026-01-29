@@ -12,65 +12,159 @@ let staff: StaffMember[] = [
     { id: '5', name: 'Miguel González', createdAt: new Date() },
 ];
 
+// --- High-Quality Mock Data for Tequila, Jalisco ---
 
-// Helper functions to generate mock data
-// Define some cluster centers in Tequila, Jalisco
-const clusterCenters = [
-    { name: 'Centro Histórico', lat: 20.8833, lng: -103.8360 }, // Downtown
-    { name: 'La Villa', lat: 20.8875, lng: -103.8310 }, // North-East
-    { name: 'El Calvario', lat: 20.8790, lng: -103.8400 }, // South-West
-    { name: 'Buenos Aires', lat: 20.8890, lng: -103.8450 } // North-West
-];
-
-// Function to generate a coordinate near a cluster center
-function generateClusteredCoordinates(cluster: { lat: number, lng: number }, seed: number) {
-    // Smaller variation for tighter clusters, based on a seed
-    const latVariation = ((seed * 3) % 40 - 20) / 20000; // ~ +/- 100 meters
-    const lngVariation = ((seed * 7) % 40 - 20) / 20000; // ~ +/- 100 meters
-    return {
-        latitude: parseFloat((cluster.lat + latVariation).toFixed(6)),
-        longitude: parseFloat((cluster.lng + lngVariation).toFixed(6))
-    };
-}
-
-const addresses = [
-    'Calle Jose Cuervo 5, Centro', 'Calle Sixto Gorjón 10, Centro', 'Calle Juarez 114, Centro',
-    'Calle Ramon Corona 25, Centro', 'Calle Hidalgo 73, Centro', 'Calle Zaragoza 32, Centro',
-    'Calle Abasolo 55, La Villa', 'Calle Morelos 12, La Villa', 'Calle Ocampo 9, El Calvario',
-    'Calle de la Cruz 22, El Calvario', 'Calle Tabasco 58, Buenos Aires', 'Calle Albino Rojas 15, Buenos Aires'
-];
-
-const recipientNames = [
-    'Alejandro Fernández', 'Mariana Rodríguez', 'Javier Gómez', 'Ximena Pérez', 'Carlos Martínez',
-    'Guadalupe Sánchez', 'Miguel Ángel Torres', 'Sofía Ramírez', 'Diego Flores', 'Lucía Vázquez'
-];
-
-
-const timeSlots: Array<'morning' | 'afternoon' | 'evening'> = ['morning', 'afternoon', 'evening'];
-const paymentStatuses: Array<'paid' | 'due'> = ['paid', 'due'];
-const deliveryTypes: Array<'delivery' | 'pickup'> = ['delivery', 'pickup'];
-
-for (let i = 1; i <= 100; i++) {
-    // Assign each order to a cluster to ensure they are grouped
-    const cluster = clusterCenters[i % clusterCenters.length];
-    const { latitude, longitude } = generateClusteredCoordinates(cluster, i); 
-    const address = `${addresses[i % addresses.length]}, Tequila, Jalisco`;
-    
-    orders.push({
-        id: String(i),
-        orderNumber: `ORD-${String(i).padStart(3, '0')}`,
-        address,
-        recipientName: recipientNames[i % recipientNames.length],
-        contactNumber: `333-123-${String(i).padStart(4, '0')}`,
-        deliveryType: deliveryTypes[i % deliveryTypes.length],
-        paymentStatus: paymentStatuses[i % paymentStatuses.length],
-        deliveryTimeSlot: timeSlots[i % timeSlots.length],
+const mockOrders: Omit<Order, 'id' | 'createdAt'>[] = [
+    // --- Cluster 1: Centro Histórico (Morning) ---
+    {
+        orderNumber: 'ORD-001',
+        recipientName: 'Hotel Solar de las Animas',
+        address: 'Calle Ramon Corona 86, Centro, Tequila, Jalisco',
+        contactNumber: '333-123-0001',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'morning',
         deliveryTime: null,
-        latitude,
-        longitude,
-        createdAt: new Date(Date.now() - (100 - i) * 3600000), // created in last 100 hours
+        latitude: 20.8845,
+        longitude: -103.8365,
+    },
+    {
+        orderNumber: 'ORD-002',
+        recipientName: 'Restaurante La Antigua Casona',
+        address: 'Calle Sixto Gorjón 83, Centro, Tequila, Jalisco',
+        contactNumber: '333-123-0002',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'morning',
+        deliveryTime: null,
+        latitude: 20.8833,
+        longitude: -103.8359,
+    },
+    {
+        orderNumber: 'ORD-003',
+        recipientName: 'Destilería La Rojeña',
+        address: 'Calle Jose Cuervo 73, Centro, Tequila, Jalisco',
+        contactNumber: '333-123-0003',
+        deliveryType: 'delivery',
+        paymentStatus: 'paid', // This one won't be clustered
+        deliveryTimeSlot: 'morning',
+        deliveryTime: null,
+        latitude: 20.8829,
+        longitude: -103.8373,
+    },
+     {
+        orderNumber: 'ORD-004',
+        recipientName: 'Plaza Principal de Tequila',
+        address: 'Calle Sixto Gorjón 1, Centro, Tequila, Jalisco',
+        contactNumber: '333-123-0004',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'morning',
+        deliveryTime: null,
+        latitude: 20.8838,
+        longitude: -103.8362,
+    },
+
+    // --- Cluster 2: La Villa (Afternoon) ---
+    {
+        orderNumber: 'ORD-005',
+        recipientName: 'Tequila Fortaleza',
+        address: 'Calle Tabasco 255, La Villa, Tequila, Jalisco',
+        contactNumber: '333-123-0005',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'afternoon',
+        deliveryTime: null,
+        latitude: 20.8880,
+        longitude: -103.8315,
+    },
+    {
+        orderNumber: 'ORD-006',
+        recipientName: 'Vecino de La Villa',
+        address: 'Calle Abasolo 55, La Villa, Tequila, Jalisco',
+        contactNumber: '333-123-0006',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'afternoon',
+        deliveryTime: null,
+        latitude: 20.8872,
+        longitude: -103.8305,
+    },
+     {
+        orderNumber: 'ORD-007',
+        recipientName: 'Otro Vecino de La Villa',
+        address: 'Calle Morelos 12, La Villa, Tequila, Jalisco',
+        contactNumber: '333-123-0007',
+        deliveryType: 'pickup', // This one won't be clustered
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'afternoon',
+        deliveryTime: null,
+        latitude: 20.8865,
+        longitude: -103.8320,
+    },
+
+    // --- Cluster 3: El Calvario (Afternoon) ---
+     {
+        orderNumber: 'ORD-008',
+        recipientName: 'Capilla del Calvario',
+        address: 'Calle de la Cruz 22, El Calvario, Tequila, Jalisco',
+        contactNumber: '333-123-0008',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'afternoon',
+        deliveryTime: null,
+        latitude: 20.8795,
+        longitude: -103.8405,
+    },
+    {
+        orderNumber: 'ORD-009',
+        recipientName: 'Residente de El Calvario',
+        address: 'Calle Ocampo 9, El Calvario, Tequila, Jalisco',
+        contactNumber: '333-123-0009',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'afternoon',
+        deliveryTime: null,
+        latitude: 20.8805,
+        longitude: -103.8415,
+    },
+
+    // --- Cluster 4: Evening Deliveries ---
+    {
+        orderNumber: 'ORD-010',
+        recipientName: 'Bar La Capilla',
+        address: 'Calle Hidalgo 34, Centro, Tequila, Jalisco',
+        contactNumber: '333-123-0010',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'evening',
+        deliveryTime: null,
+        latitude: 20.8831,
+        longitude: -103.8350,
+    },
+    {
+        orderNumber: 'ORD-011',
+        recipientName: 'Tequila Orendain',
+        address: 'Av. Juan P. de Orendain 49, Tequila, Jalisco',
+        contactNumber: '333-123-0011',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'evening',
+        deliveryTime: null,
+        latitude: 20.8890,
+        longitude: -103.8290,
+    },
+];
+
+
+// Populate the in-memory store
+mockOrders.forEach((order, index) => {
+    orders.push({
+        ...order,
+        id: String(index + 1),
+        createdAt: new Date(Date.now() - (mockOrders.length - index) * 3600000), // created in last few hours
     });
-}
+});
 
 
 // Simulate network latency
