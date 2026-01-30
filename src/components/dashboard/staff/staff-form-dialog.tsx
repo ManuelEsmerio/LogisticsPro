@@ -9,8 +9,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -94,8 +92,10 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
             <span className="material-symbols-outlined text-primary text-3xl">person_add</span>
             <DialogTitle className="text-primary dark:text-white text-2xl font-bold tracking-tight">{isEditMode ? "Editar Personal" : "Registro de Nuevo Personal"}</DialogTitle>
           </div>
-           <DialogClose className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
-            <span className="material-symbols-outlined">close</span>
+           <DialogClose asChild>
+             <button className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
+                <span className="material-symbols-outlined">close</span>
+            </button>
           </DialogClose>
         </DialogHeader>
         <Form {...form}>
@@ -222,7 +222,7 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
                   </div>
                 </div>
               </ScrollArea>
-              <DialogFooter className="px-8 py-6 bg-silk-gray dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-4">
+              <div className="px-8 py-6 bg-silk-gray dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-4">
                   <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="px-8 py-3 rounded-full text-charcoal-gray dark:text-gray-300 font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors tracking-wide">
                       CANCELAR
                   </Button>
@@ -230,7 +230,7 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
                       {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="material-symbols-outlined text-[18px]">save</span>}
                       GUARDAR PERSONAL
                   </Button>
-              </DialogFooter>
+              </div>
             </form>
         </Form>
       </DialogContent>

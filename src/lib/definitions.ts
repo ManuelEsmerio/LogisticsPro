@@ -3,10 +3,10 @@ import { z } from "zod";
 export const orderSchema = z.object({
   id: z.string().optional(),
   orderNumber: z.string().min(1, "El número de pedido es obligatorio"),
-  address: z.string().min(1, "La dirección es obligatoria"),
-  recipientName: z.string().min(1, "El nombre del destinatario es obligatorio"),
-  product: z.string().optional(),
-  contactNumber: z.string().min(1, "El número de contacto es obligatorio"),
+  address: z.string().min(1, "La dirección de entrega es obligatoria"),
+  recipientName: z.string().min(1, "El nombre del cliente es obligatorio"),
+  product: z.string().min(1, "El tipo de arreglo es obligatorio"),
+  contactNumber: z.string().min(1, "El teléfono de contacto es obligatorio"),
   deliveryType: z.enum(["delivery", "pickup"]),
   paymentStatus: z.enum(["paid", "due", "assigned"]),
   priority: z.enum(["Alta", "Media", "Baja"]),
@@ -15,11 +15,11 @@ export const orderSchema = z.object({
   deliveryTime: z.date().nullable(),
 }).refine(data => {
     if (data.deliveryType === 'delivery' && data.deliveryTimeType === 'timeslot') {
-      return data.deliveryTimeSlot !== null;
+      return data.deliveryTimeSlot !== null && data.deliveryTime !== null;
     }
     return true;
 }, {
-    message: "La franja horaria es obligatoria",
+    message: "La franja horaria y la fecha son obligatorias",
     path: ["deliveryTimeSlot"],
 })
 .refine(data => {
@@ -51,7 +51,12 @@ export type Order = {
   priority: 'Alta' | 'Media' | 'Baja';
 };
 
-export type Waypoint = Pick<Order, 'orderNumber' | 'address' | 'latitude' | 'longitude'>;
+export type Waypoint = {
+  orderNumber: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+};
 
 export type ClusteredRoute = {
   timeSlot: 'morning' | 'afternoon' | 'evening';
