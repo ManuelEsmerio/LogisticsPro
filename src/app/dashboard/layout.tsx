@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import dynamic from 'next/dynamic';
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
+import { cn } from '@/lib/utils';
 
 const UserNav = dynamic(() => import('@/components/dashboard/user-nav').then(mod => mod.UserNav), {
   ssr: false,
@@ -43,13 +44,13 @@ export default function DashboardLayout({
                 </div>
             </div>
         </header>
-        <main className="max-w-[1400px] mx-auto w-full p-6 space-y-6">
+        <main className={cn("w-full", isRoutesPage ? "flex-1 flex flex-col overflow-hidden" : "max-w-[1400px] mx-auto p-6 space-y-6")}>
             {children}
         </main>
         {!isRoutesPage && (
           <Link href="/dashboard/routes">
             <Button
-              className="fixed bottom-8 right-8 w-14 h-14 rounded-md shadow-xl flex items-center justify-center hover:-translate-y-1 transition-all z-50 bg-[#1E293B] text-white hover:bg-slate-800"
+              className="fixed bottom-8 right-8 w-14 h-14 rounded-md shadow-xl flex items-center justify-center bg-[#1E293B] text-white hover:bg-slate-800 hover:-translate-y-1 transition-all z-50"
               aria-label="Ver rutas"
             >
               <span className="material-symbols-outlined text-2xl">map</span>

@@ -13,15 +13,21 @@ import { getClusteredRoutesAction } from '@/lib/actions';
 import type { ClusteredRoute, Order, StaffMember } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MainNav } from '@/components/dashboard/main-nav';
-import Logo from '@/components/logo';
-import { Input } from '@/components/ui/input';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { UserNav } from '@/components/dashboard/user-nav';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { DndContext, useDraggable, useDroppable, DragOverlay, closestCenter } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
 
-function UnassignedOrderCard({ order }: { order: Order }) {
+function UnassignedOrderCard({ order, isOverlay = false }: { order: Order; isOverlay?: boolean }) {
+    const {attributes, listeners, setNodeRef, transform} = useDraggable({
+        id: order.id,
+        data: { order }
+    });
+
+    const style = transform ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    } : undefined;
+
     const zoneConfig = {
         morning: { color: 'border-l-zone-north', text: 'text-zone-north', name: 'ZONA NORTE' },
         afternoon: { color: 'border-l-zone-center', text: 'text-zone-center', name: 'ZONA CENTRO' },
@@ -30,7 +36,7 @@ function UnassignedOrderCard({ order }: { order: Order }) {
     const config = zoneConfig[order.deliveryTimeSlot || 'morning'];
     
     return (
-        <div className={cn("bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing border-l-4", config.color)}>
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn("bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing border-l-4", config.color, isOverlay && "shadow-2xl")}>
             <div className="flex justify-between items-start mb-1">
                 <span className={cn("text-[10px] font-bold", config.text)}>{config.name} • {order.orderNumber}</span>
                 <span className="material-symbols-outlined text-slate-300 text-lg">drag_indicator</span>
@@ -45,11 +51,14 @@ function UnassignedOrderCard({ order }: { order: Order }) {
 }
 
 function DriverColumn({ driver, route, onAssignRoute }: { driver: StaffMember, route: ClusteredRoute | null, onAssignRoute: (driverId: string, routeId: number) => void }) {
+    const { isOver, setNodeRef } = useDroppable({
+        id: driver.id,
+    });
     const orders = route?.orders || [];
     const capacity = 12; // Mock capacity
 
     return (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-full min-w-[300px]">
+        <div ref={setNodeRef} className={cn("bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-full min-w-[300px] transition-colors", isOver && "bg-slate-100")}>
             <div className="p-5 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
                 <div className="flex items-center gap-4 mb-4">
                     <div className="relative">
@@ -111,11 +120,53 @@ export default function RoutesPage() {
     const [allOrders, setAllOrders] = useState<Order[]>([]);
     const [staff, setStaff] = useState<StaffMember[]>([]);
     const [assignedDrivers, setAssignedDrivers] = useState<Record<number, string>>({});
+    const [activeId, setActiveId] = useState<string | null>(null);
+
+    const activeOrder = activeId ? allOrders.find(o => o.id === activeId) : null;
+    const { setNodeRef: unassignedDropRef } = useDroppable({ id: 'unassigned' });
+
 
     useEffect(() => {
         setIsMounted(true);
         handleTimeSlotChange(timeSlot);
     }, []);
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        setActiveId(null);
+        const { active, over } = event;
+        if (!over) return;
+
+        const orderId = String(active.id);
+        const droppableId = String(over.id); // driver.id or 'unassigned'
+
+        const clusterIndex = clusters.findIndex(c => c.orders.some(o => o.id === orderId));
+        if (clusterIndex === -1) return;
+
+        startTransition(() => {
+            setAssignedDrivers(prev => {
+                const newAssignments = { ...prev };
+
+                // Remove the cluster's previous assignment
+                const oldAssignmentKey = Object.keys(newAssignments).find(key => Number(key) === clusterIndex);
+                if (oldAssignmentKey) {
+                    delete newAssignments[clusterIndex];
+                }
+
+                // Remove the target driver's previous assignment
+                const targetDriverOldAssignmentKey = Object.keys(newAssignments).find(key => newAssignments[Number(key)] === droppableId);
+                if (targetDriverOldAssignmentKey) {
+                    delete newAssignments[Number(targetDriverOldAssignmentKey)];
+                }
+                
+                // Create new assignment if not dropping in unassigned
+                if (droppableId !== 'unassigned') {
+                    newAssignments[clusterIndex] = droppableId;
+                }
+                
+                return newAssignments;
+            });
+        });
+    };
 
     const handleTimeSlotChange = (value: 'morning' | 'afternoon' | 'evening') => {
         setTimeSlot(value);
@@ -124,9 +175,8 @@ export default function RoutesPage() {
         setAssignedDrivers({});
         startTransition(async () => {
             const result = await getClusteredRoutesAction(value);
-            if (result && !result.error) {
+            if (result && result.clusteredRoutes) {
                 setClusters(result.clusteredRoutes);
-
                 const ordersFromClusters = result.clusteredRoutes.flatMap(c => c.orders);
                 setAllOrders(ordersFromClusters);
                 
@@ -134,40 +184,24 @@ export default function RoutesPage() {
                     setStaff(result.staff);
                 }
             } else {
-                 toast({ variant: "destructive", title: "Error", description: result.error });
+                 toast({ variant: "destructive", title: "Error", description: result.error || "No se pudieron obtener las rutas." });
             }
         });
     }
 
-    const unassignedOrders = allOrders.filter(order => 
-        !Object.values(assignedDrivers).some(driverId => {
-            const assignedClusterIndex = Object.keys(assignedDrivers).find(key => assignedDrivers[parseInt(key)] === driverId);
-            if (assignedClusterIndex === undefined) return false;
-            const assignedCluster = clusters[parseInt(assignedClusterIndex)];
-            return assignedCluster?.orders.some(o => o.orderNumber === order.orderNumber);
-        })
-    );
+    const unassignedOrders = allOrders.filter(order => {
+        const clusterIndex = clusters.findIndex(c => c.orders.some(o => o.id === order.id));
+        return clusterIndex !== -1 && assignedDrivers[clusterIndex] === undefined;
+    });
     
     return (
-       <div className="bg-silk-gray font-sans text-slate-900 min-h-screen flex flex-col overflow-hidden">
-            <header className="h-14 bg-navy-dark flex items-center justify-between px-6 shrink-0 z-50">
-                <div className="flex items-center gap-12 h-full">
-                    <Logo />
-                    <MainNav />
-                </div>
-                <div className="flex items-center gap-6">
-                    <div className="relative group hidden sm:block">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
-                        <Input className="bg-white/10 border-none rounded-lg py-1.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 w-64 focus:ring-1 focus:ring-white/20 transition-all" placeholder="Buscar pedido..." type="text"/>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <ThemeToggle />
-                        <UserNav />
-                    </div>
-                </div>
-            </header>
-
-            <main className="flex-1 flex flex-col overflow-hidden">
+       <div className="h-full font-sans text-slate-900 flex flex-col overflow-hidden">
+            <DndContext 
+                onDragStart={(event) => setActiveId(String(event.active.id))}
+                onDragEnd={handleDragEnd}
+                onDragCancel={() => setActiveId(null)}
+                collisionDetection={closestCenter}
+            >
                 <div className="px-8 py-6 flex flex-col gap-4 bg-white border-b border-slate-200 shrink-0">
                     <div className="flex justify-between items-end">
                         <div>
@@ -202,7 +236,7 @@ export default function RoutesPage() {
                                 <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unassignedOrders.length}</span>
                             </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
+                        <div ref={unassignedDropRef} className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
                             {isPending && Array.from({length: 5}).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
                             {!isPending && unassignedOrders.map(order => <UnassignedOrderCard key={order.id} order={order} />)}
                              {!isPending && unassignedOrders.length === 0 && (
@@ -214,8 +248,8 @@ export default function RoutesPage() {
                         {isPending && Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-full min-w-[300px] rounded-2xl" />)}
                         
                         {!isPending && staff.map(driver => {
-                            const assignedClusterIndex = Object.keys(assignedDrivers).find(key => assignedDrivers[parseInt(key)] === driver.id);
-                            const route = assignedClusterIndex !== undefined ? clusters[parseInt(assignedClusterIndex)] : null;
+                            const assignedClusterIndexStr = Object.keys(assignedDrivers).find(key => assignedDrivers[parseInt(key)] === driver.id);
+                            const route = assignedClusterIndexStr !== undefined ? clusters[parseInt(assignedClusterIndexStr)] : null;
                             return <DriverColumn key={driver.id} driver={driver} route={route} onAssignRoute={() => {}} />
                         })}
                         
@@ -231,11 +265,10 @@ export default function RoutesPage() {
                         )}
                     </section>
                 </div>
-            </main>
-            <button className="fixed bottom-24 right-8 bg-navy-dark text-white p-4 rounded-2xl shadow-2xl hover:scale-105 active:scale-95 transition-all z-50 flex items-center gap-2">
-                <span className="material-symbols-outlined">map</span>
-                <span className="text-sm font-semibold pr-1">Ver Mapa</span>
-            </button>
+                 <DragOverlay>
+                    {activeOrder ? <UnassignedOrderCard order={activeOrder} isOverlay /> : null}
+                </DragOverlay>
+            </DndContext>
             <footer className="h-20 bg-white border-t border-slate-200 flex items-center justify-between px-8 shrink-0 z-40">
                 <div className="flex items-center gap-10">
                     <div className="flex items-center gap-3">
@@ -270,4 +303,3 @@ export default function RoutesPage() {
        </div>
     );
 }
-
