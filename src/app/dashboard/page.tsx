@@ -1,11 +1,12 @@
 import { getOrders } from "@/lib/data";
 import { DataTable } from "@/components/dashboard/data-table/data-table";
 import { columns } from "@/components/dashboard/data-table/columns";
-import { OrderFormDialog } from "@/components/dashboard/order-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CreateOrderButton } from "@/components/dashboard/create-order-button";
+
 
 async function StatCard({ title, value, change, icon, changeColor, iconBg, iconColor, subtext }: {
     title: string;
@@ -116,11 +117,7 @@ export default async function DashboardPage() {
             <Button variant="outline" className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 shadow-sm">
                 <span className="material-symbols-outlined text-lg">download</span> Exportar
             </Button>
-            <OrderFormDialog>
-                <Button variant="default" className="bg-primary text-primary-foreground shadow-md">
-                    <span className="material-symbols-outlined text-lg">add_box</span> Nuevo Pedido
-                </Button>
-            </OrderFormDialog>
+            <CreateOrderButton />
         </div>
       </div>
 
