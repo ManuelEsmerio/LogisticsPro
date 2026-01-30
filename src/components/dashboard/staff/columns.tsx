@@ -1,7 +1,8 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, Row } from "@tanstack/react-table";
 import { format } from "date-fns";
+import { useState, useEffect } from "react";
 
 import type { StaffMember } from "@/lib/definitions";
 import { StaffDataTableRowActions } from "./row-actions";
@@ -14,6 +15,22 @@ const roleColors: Record<StaffMember['role'], string> = {
     'Administrador': 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400',
     'Florista Senior': 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400',
     'Gerente': 'bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-400',
+};
+
+// This new cell component defers date formatting to the client-side to prevent hydration errors.
+const CreatedAtCell = ({ row }: { row: Row<StaffMember> }) => {
+  const createdAt: StaffMember['createdAt'] = row.getValue("createdAt");
+  const [formattedDate, setFormattedDate] = useState("");
+
+  useEffect(() => {
+    if (createdAt) {
+      // Formatting is done on the client after the component mounts.
+      // This ensures the client and server don't have a mismatch due to timezones.
+      setFormattedDate(format(new Date(createdAt), "dd/MM/yyyy"));
+    }
+  }, [createdAt]);
+
+  return <>{formattedDate}</>;
 };
 
 
@@ -52,7 +69,7 @@ export const columns: ColumnDef<StaffMember>[] = [
   {
     accessorKey: "createdAt",
     header: "Fecha Ingreso",
-    cell: ({ row }) => format(new Date(row.getValue("createdAt")), "dd/MM/yyyy"),
+    cell: CreatedAtCell,
   },
   {
     accessorKey: "status",
