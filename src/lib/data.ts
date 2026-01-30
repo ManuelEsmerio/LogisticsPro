@@ -9,6 +9,7 @@ const staffAvatar2 = PlaceHolderImages.find(p => p.id === 'staff-2')?.imageUrl ?
 const staffAvatar3 = PlaceHolderImages.find(p => p.id === 'staff-3')?.imageUrl ?? "https://picsum.photos/seed/3/100/100";
 const staffAvatar4 = PlaceHolderImages.find(p => p.id === 'staff-4')?.imageUrl ?? "https://picsum.photos/seed/4/100/100";
 const staffAvatar5 = PlaceHolderImages.find(p => p.id === 'staff-5')?.imageUrl ?? "https://picsum.photos/seed/5/100/100";
+const staffAvatar6 = PlaceHolderImages.find(p => p.id === 'staff-6')?.imageUrl ?? "https://picsum.photos/seed/6/100/100";
 
 
 // In-memory store for staff
@@ -74,6 +75,19 @@ let staff: StaffMember[] = [
         avatarUrl: staffAvatar5,
         createdAt: new Date('2021-08-01'),
         vehicleType: 'ninguno'
+    },
+    { 
+        id: '6', 
+        name: 'Sofía Reyes', 
+        email: 'sreyes@logistics.pro',
+        phone: '655 666 777',
+        role: 'Repartidor',
+        status: 'Inactivo',
+        shift: 'Tarde (14:00 - 22:00)',
+        avatarUrl: staffAvatar6,
+        createdAt: new Date('2023-09-20'),
+        vehicleType: 'furgoneta',
+        licenseNumber: 'D-9012DEF'
     },
 ];
 
@@ -203,6 +217,91 @@ const mockOrders: Omit<Order, 'id' | 'createdAt'>[] = [
         latitude: 20.8805,
         longitude: -103.8415,
         priority: 'Alta',
+    },
+    // New Orders for more clusters
+    {
+        orderNumber: '#FL-9001',
+        recipientName: 'Ricardo Ponce',
+        product: 'Ramo de Girasoles',
+        address: 'Carretera a la Estancia 12, El Ranchito, Jalisco',
+        contactNumber: '333-123-9001',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'morning',
+        deliveryTime: null,
+        latitude: 20.9010,
+        longitude: -103.8550,
+        priority: 'Media',
+    },
+    {
+        orderNumber: '#FL-9002',
+        recipientName: 'Patricia Solis',
+        product: 'Caja de Rosas Rojas',
+        address: 'Privada las Flores 5, El Ranchito, Jalisco',
+        contactNumber: '333-123-9002',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'morning',
+        deliveryTime: null,
+        latitude: 20.9015,
+        longitude: -103.8545,
+        priority: 'Alta',
+    },
+    {
+        orderNumber: '#FL-9003',
+        recipientName: 'David Peña',
+        product: 'Ramo de Tulipanes',
+        address: 'Hacienda San Martín 40, San Martin, Jalisco',
+        contactNumber: '333-123-9003',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'afternoon',
+        deliveryTime: null,
+        latitude: 20.8650,
+        longitude: -103.8100,
+        priority: 'Baja',
+    },
+     {
+        orderNumber: '#FL-9004',
+        recipientName: 'Verónica Luna',
+        product: 'Centro de Mesa',
+        address: 'Calle Hidalgo 200, San Martin, Jalisco',
+        contactNumber: '333-123-9004',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'afternoon',
+        deliveryTime: null,
+        latitude: 20.8655,
+        longitude: -103.8115,
+        priority: 'Media',
+    },
+    {
+        orderNumber: '#FL-9005',
+        recipientName: 'Oscar Nieto',
+        product: 'Planta Suculenta',
+        address: 'Calle del Sol 1, La Cima, Jalisco',
+        contactNumber: '333-123-9005',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'evening',
+        deliveryTime: null,
+        latitude: 20.8950,
+        longitude: -103.8200,
+        priority: 'Baja',
+    },
+    {
+        orderNumber: '#FL-9006',
+        recipientName: 'Isabel Torres',
+        product: 'Ramo de Gerberas',
+        address: 'Avenida Luna 50, La Cima, Jalisco',
+        contactNumber: '333-123-9006',
+        deliveryType: 'delivery',
+        paymentStatus: 'due',
+        deliveryTimeSlot: 'evening',
+        deliveryTime: null,
+        latitude: 20.8955,
+        longitude: -103.8210,
+        priority: 'Media',
     },
 ];
 

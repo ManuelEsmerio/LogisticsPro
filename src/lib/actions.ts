@@ -154,11 +154,12 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
         const deliveryOrders = allOrders
             .filter(order => order.deliveryType === 'delivery' && order.deliveryTimeSlot === timeSlot && order.paymentStatus === 'due');
         
-        const staff = await getStaff();
-        const activeDrivers = staff.filter(s => s.role === 'Repartidor' && s.status === 'Activo');
+        const allStaff = await getStaff();
+        const allDrivers = allStaff.filter(s => s.role === 'Repartidor');
+        const activeDrivers = allDrivers.filter(s => s.status === 'Activo');
 
         if (deliveryOrders.length === 0) {
-            return { clusteredRoutes: [], staff: activeDrivers };
+            return { clusteredRoutes: [], staff: activeDrivers, allStaff: allDrivers };
         }
 
         const dataset = deliveryOrders.map(order => [order.latitude, order.longitude]);
@@ -193,7 +194,7 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
 
         const clusteredRoutes = await Promise.all(clusteredRoutesPromises);
 
-        return { clusteredRoutes, staff: activeDrivers };
+        return { clusteredRoutes, staff: activeDrivers, allStaff: allDrivers };
 
     } catch (error) {
         console.error(error);
