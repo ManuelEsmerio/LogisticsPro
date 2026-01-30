@@ -17,51 +17,63 @@ let staff: StaffMember[] = [
         id: '1', 
         name: 'Juan Pérez', 
         email: 'jperez@logistics.pro',
+        phone: '600 111 222',
         role: 'Repartidor',
         status: 'Activo',
         shift: 'Mañana (08:00 - 16:00)',
         avatarUrl: staffAvatar1,
-        createdAt: new Date('2023-01-15') 
+        createdAt: new Date('2023-01-15'),
+        vehicleType: 'moto',
+        licenseNumber: 'B-1234XYZ'
     },
     { 
         id: '2', 
         name: 'Ana Gómez', 
         email: 'agomez@logistics.pro',
+        phone: '611 222 333',
         role: 'Administrador',
         status: 'Activo',
         shift: 'Intermedio (10:00 - 18:00)',
         avatarUrl: staffAvatar2,
-        createdAt: new Date('2022-03-22') 
+        createdAt: new Date('2022-03-22'),
+        vehicleType: 'ninguno',
     },
     { 
         id: '3', 
         name: 'Carlos Rodríguez', 
         email: 'crodriguez@logistics.pro',
+        phone: '622 333 444',
         role: 'Florista Senior',
         status: 'Inactivo',
         shift: 'Tarde (14:00 - 22:00)',
         avatarUrl: staffAvatar3,
-        createdAt: new Date('2023-11-10') 
+        createdAt: new Date('2023-11-10'),
+        vehicleType: 'ninguno'
     },
     { 
         id: '4', 
         name: 'Laura Fernández', 
         email: 'lfernandez@logistics.pro',
+        phone: '633 444 555',
         role: 'Repartidor',
         status: 'Activo',
         shift: 'Mañana (08:00 - 16:00)',
         avatarUrl: staffAvatar4,
-        createdAt: new Date('2024-02-05') 
+        createdAt: new Date('2024-02-05'),
+        vehicleType: 'bici',
+        licenseNumber: 'C-5678ABC'
     },
     { 
         id: '5', 
         name: 'Miguel González', 
         email: 'mgonzalez@logistics.pro',
+        phone: '644 555 666',
         role: 'Gerente',
         status: 'Activo',
         shift: 'Intermedio (09:00 - 17:00)',
         avatarUrl: staffAvatar5,
-        createdAt: new Date('2021-08-01') 
+        createdAt: new Date('2021-08-01'),
+        vehicleType: 'ninguno'
     },
 ];
 
@@ -251,19 +263,16 @@ export async function getStaff(): Promise<StaffMember[]> {
     return staff.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
-export async function addStaff(staffData: Omit<StaffMember, 'id' | 'createdAt' | 'email' | 'role' | 'status' | 'shift' | 'avatarUrl'>): Promise<StaffMember> {
+export async function addStaff(staffData: Omit<StaffMember, 'id' | 'createdAt' | 'status'>): Promise<StaffMember> {
     await sleep(300);
     const newStaffMember: StaffMember = {
-        ...staffData,
         id: String(Date.now()),
-        email: `${staffData.name.split(' ')[0].toLowerCase()}@logistics.pro`,
-        role: 'Repartidor',
         status: 'Activo',
-        shift: 'Mañana (08:00 - 16:00)',
-        avatarUrl: `https://picsum.photos/seed/${Date.now()}/100/100`,
+        avatarUrl: staffData.avatarUrl || `https://picsum.photos/seed/${Date.now()}/100/100`,
         createdAt: new Date(),
+        ...staffData,
     };
-    staff.push(newStaffMember);
+    staff.unshift(newStaffMember);
     return newStaffMember;
 }
 

@@ -4,7 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addOrder, deleteOrder, getOrders, updateOrder, addStaff, updateStaff, deleteStaff, getStaff } from "@/lib/data";
-import { orderSchema, staffMemberSchema, type Order, type OrderFormValues, type StaffMemberFormValues, Waypoint } from "@/lib/definitions";
+import { orderSchema, staffMemberSchema, type Order, type OrderFormValues, type StaffMember, type StaffMemberFormValues, Waypoint } from "@/lib/definitions";
 import { DBSCAN } from 'density-clustering';
 
 // --- Real Geocoding with Google Maps API ---
@@ -112,13 +112,21 @@ export async function saveOrder(data: OrderFormValues) {
   
   const { id, deliveryTimeType, ...orderData } = validatedFields.data;
 
-  const { latitude, longitude } = await geocodeAddress(orderData.address);
+  // Ensure nullable fields are handled correctly
+  const finalOrderData = {
+      ...orderData,
+      deliveryTime: deliveryTimeType === 'exact_time' ? orderData.deliveryTime : null,
+      deliveryTimeSlot: deliveryTimeType === 'timeslot' ? orderData.deliveryTimeSlot : null,
+  };
+
+
+  const { latitude, longitude } = await geocodeAddress(finalOrderData.address);
 
   try {
     if (id) {
-      await updateOrder(id, { ...orderData, latitude, longitude });
+      await updateOrder(id, { ...finalOrderData, latitude, longitude });
     } else {
-      await addOrder({ ...orderData, latitude, longitude });
+      await addOrder({ ...finalOrderData, latitude, longitude });
     }
   } catch (error) {
     return { message: "Error de base de datos: No se pudo guardar el pedido." };
@@ -146,13 +154,15 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
         const deliveryOrders = allOrders
             .filter(order => order.deliveryType === 'delivery' && order.deliveryTimeSlot === timeSlot && order.paymentStatus === 'due');
         
+        const staff = await getStaff();
+        const activeDrivers = staff.filter(s => s.role === 'Repartidor' && s.status === 'Activo');
+
         if (deliveryOrders.length === 0) {
-            return { clusteredRoutes: [], staff: await getStaff() };
+            return { clusteredRoutes: [], staff: activeDrivers };
         }
 
         const dataset = deliveryOrders.map(order => [order.latitude, order.longitude]);
         
-        // Epsilon: max distance in degrees (approx 1km). minPoints: min orders to form a cluster.
         const scanner = new DBSCAN();
         const clustersIndices = scanner.run(dataset, 0.01, 2);
 
@@ -183,7 +193,7 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
 
         const clusteredRoutes = await Promise.all(clusteredRoutesPromises);
 
-        return { clusteredRoutes, staff: await getStaff() };
+        return { clusteredRoutes, staff: activeDrivers };
 
     } catch (error) {
         console.error(error);
@@ -201,15 +211,19 @@ export async function saveStaff(data: StaffMemberFormValues) {
     };
   }
   
-  const { id, ...staffData } = validatedFields.data;
+  const { id, firstName, lastName, ...staffData } = validatedFields.data;
+  const name = `${firstName} ${lastName}`;
+  const dataToSave = { ...staffData, name };
+
 
   try {
     if (id) {
-      await updateStaff(id, staffData);
+      await updateStaff(id, dataToSave);
     } else {
-      await addStaff(staffData);
+      await addStaff(dataToSave as Omit<StaffMember, 'id' | 'createdAt' | 'status'>);
     }
   } catch (error) {
+    console.error(error);
     return { message: "Error de base de datos: No se pudo guardar el miembro del personal." };
   }
 

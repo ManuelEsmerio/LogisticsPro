@@ -14,7 +14,7 @@ export const orderSchema = z.object({
   deliveryTimeSlot: z.enum(["morning", "afternoon", "evening"]).nullable(),
   deliveryTime: z.date().nullable(),
 }).refine(data => {
-    if (data.deliveryTimeType === 'timeslot') {
+    if (data.deliveryType === 'delivery' && data.deliveryTimeType === 'timeslot') {
       return data.deliveryTimeSlot !== null;
     }
     return true;
@@ -23,7 +23,7 @@ export const orderSchema = z.object({
     path: ["deliveryTimeSlot"],
 })
 .refine(data => {
-    if (data.deliveryTimeType === 'exact_time') {
+    if (data.deliveryType === 'delivery' && data.deliveryTimeType === 'exact_time') {
         return data.deliveryTime !== null;
     }
     return true;
@@ -62,8 +62,17 @@ export type ClusteredRoute = {
 
 export const staffMemberSchema = z.object({
   id: z.string().optional(),
-  name: z.string().min(1, "El nombre es obligatorio"),
+  firstName: z.string().min(1, "El nombre es obligatorio"),
+  lastName: z.string().min(1, "El apellido es obligatorio"),
+  email: z.string().email({ message: "Debe ser un correo electrónico válido." }),
+  phone: z.string().min(1, "El teléfono es obligatorio."),
+  role: z.enum(['Repartidor', 'Administrador', 'Florista Senior', 'Gerente']),
+  vehicleType: z.enum(['ninguno', 'furgoneta', 'moto', 'bici']),
+  licenseNumber: z.string().optional(),
+  shift: z.string().min(1, "El horario es obligatorio"),
+  avatarUrl: z.string().optional(),
 });
+
 
 export type StaffMemberFormValues = z.infer<typeof staffMemberSchema>;
 
@@ -76,4 +85,7 @@ export type StaffMember = {
   shift: string;
   avatarUrl: string;
   createdAt: Date;
+  phone: string;
+  vehicleType: 'ninguno' | 'furgoneta' | 'moto' | 'bici';
+  licenseNumber?: string;
 };
