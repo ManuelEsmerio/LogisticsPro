@@ -182,32 +182,28 @@ export default function RoutesPage() {
                        .filter(({ index }) => !assignedIndices.has(index));
     }, [clusters, assignedRoutes]);
 
-    const unassignedClusterIndices = useMemo(() => new Set(unassignedClusters.map(c => c.index)), [unassignedClusters]);
-
     const handleDragEnd = (event: DragEndEvent) => {
         setActiveId(null);
         const { active, over } = event;
-        if (!over || !active.data.current || active.data.current.type !== 'cluster') return;
-    
-        const draggedClusterIndex = active.data.current.clusterIndex as number;
-        const targetId = over.id;
-        const overIsDriver = over.data.current?.type === 'driver';
-        const overIsUnassignedContainer = targetId === 'unassigned';
+
+        // Ensure we have a valid drag and drop
+        if (!active || !over) return;
+
+        const draggedData = active.data.current;
+        const overData = over.data.current;
+        const overId = over.id;
+
+        // Ensure we are dragging a cluster
+        if (draggedData?.type !== 'cluster') return;
         
-        let overIsUnassignedItem = false;
-        if (over.data.current?.type === 'cluster') {
-            const overClusterIndex = over.data.current.clusterIndex;
-            if (unassignedClusterIndices.has(overClusterIndex)) {
-                overIsUnassignedItem = true;
-            }
-        }
-    
-        // Target: Unassigned Area
-        if (overIsUnassignedContainer || overIsUnassignedItem) {
+        const draggedClusterIndex = draggedData.clusterIndex as number;
+
+        // Scenario 1: Dropping a cluster onto the "Unassigned" sidebar
+        if (overId === 'unassigned') {
             startTransition(() => {
                 setAssignedRoutes(prev => {
-                    const newAssignments = {...prev};
-                    // Find driver who had this route and remove it
+                    const newAssignments = { ...prev };
+                    // Find which driver had this route and remove the assignment
                     const sourceDriverId = Object.keys(newAssignments).find(key => newAssignments[key] === draggedClusterIndex);
                     if (sourceDriverId) {
                         delete newAssignments[sourceDriverId];
@@ -217,31 +213,41 @@ export default function RoutesPage() {
             });
             return;
         }
-    
-        // Target: Driver Column
-        if (overIsDriver) {
-            const targetDriverId = String(targetId);
+
+        // Scenario 2: Dropping a cluster onto a driver column
+        if (overData?.type === 'driver') {
+            const targetDriverId = String(overId);
+
             startTransition(() => {
                 setAssignedRoutes(prev => {
                     const newAssignments = { ...prev };
+                    
+                    // Find which driver (if any) this route was previously assigned to
                     const sourceDriverId = Object.keys(newAssignments).find(key => newAssignments[key] === draggedClusterIndex);
+
+                    // Check if the target driver already has a route
+                    const existingRouteOfTarget = newAssignments[targetDriverId];
+                    
+                    // Remove previous assignment of the dragged route
                     if (sourceDriverId) {
                         delete newAssignments[sourceDriverId];
                     }
-    
-                    const existingRouteOfTarget = newAssignments[targetDriverId];
+                    
+                    // If the target driver already had a route, and the dragged route came from a driver (wasn't unassigned), swap them.
                     if (existingRouteOfTarget !== undefined && sourceDriverId) {
-                        // Swap
                         newAssignments[sourceDriverId] = existingRouteOfTarget;
                     }
                     
+                    // Assign the dragged route to the target driver
                     newAssignments[targetDriverId] = draggedClusterIndex;
+
                     return newAssignments;
                 });
             });
             return;
         }
     };
+
 
     const handleTimeSlotChange = (value: 'morning' | 'afternoon' | 'evening') => {
         if (!value) return;
