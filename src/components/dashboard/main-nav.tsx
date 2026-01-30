@@ -14,7 +14,7 @@ export function MainNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="hidden md:flex items-center gap-6">
+    <nav className="hidden md:flex h-full">
       {navItems.map(({ href, label }) => {
         const isActive = pathname === href;
         return (
@@ -22,17 +22,15 @@ export function MainNav() {
             key={label}
             href={href}
             className={cn(
-              "transition-colors text-sm font-medium pb-1",
-              isActive
-                ? "font-semibold border-b-2 border-white text-white"
-                : "text-white opacity-70 hover:opacity-100"
+              "nav-link",
+              isActive && "active"
             )}
           >
             {label}
           </Link>
         );
       })}
-       <a className="text-sm font-medium cursor-not-allowed text-white opacity-50">Inventario</a>
+       <a className={cn("nav-link", "cursor-not-allowed opacity-50")}>Inventario</a>
     </nav>
   );
 }

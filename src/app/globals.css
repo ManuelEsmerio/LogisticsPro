@@ -79,6 +79,15 @@
   }
 }
 
+@layer components {
+    .nav-link {
+        @apply flex items-center h-full px-4 text-slate-400 text-sm font-medium transition-all hover:text-white border-b-2 border-transparent;
+    }
+    .nav-link.active {
+        @apply text-white border-white;
+    }
+}
+
 .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
     height: 4px;

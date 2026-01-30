@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 
 const UserNav = dynamic(() => import('@/components/dashboard/user-nav').then(mod => mod.UserNav), {
   ssr: false,
-  loading: () => <Skeleton className="h-10 w-10 rounded-full" />,
+  loading: () => <Skeleton className="h-8 w-8 rounded-full" />,
 });
 
 export default function DashboardLayout({
@@ -25,38 +25,26 @@ export default function DashboardLayout({
 
   return (
       <div className="min-h-screen w-full flex flex-col bg-silk-gray dark:bg-background-dark">
-        <header className="sticky top-0 z-50 bg-[#1E293B] border-b border-white/10 px-6 py-3 text-white">
-            <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-                <div className="flex items-center gap-8">
-                    <Logo />
-                    <MainNav />
+        <header className="h-14 bg-navy-dark flex items-center justify-between px-6 shrink-0 z-50 text-white">
+            <div className="flex items-center gap-12 h-full">
+                <Logo />
+                <MainNav />
+            </div>
+            <div className="flex items-center gap-4">
+                <div className="relative hidden sm:block">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+                    <Input 
+                        className="bg-white/10 border-none rounded-lg py-1.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 w-64 focus:ring-1 focus:ring-white/20 transition-all"
+                        placeholder="Buscar..."
+                    />
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="relative hidden sm:block">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">search</span>
-                        <Input 
-                            className="pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-700 border-none rounded-md text-sm focus:ring-2 focus:ring-slate-400 w-64 text-foreground"
-                            placeholder="Buscar..."
-                        />
-                    </div>
-                    <ThemeToggle />
-                    <UserNav />
-                </div>
+                <ThemeToggle />
+                <UserNav />
             </div>
         </header>
         <main className={cn("w-full", isRoutesPage ? "flex-1 flex flex-col overflow-hidden" : "max-w-[1400px] mx-auto p-6 space-y-6")}>
             {children}
         </main>
-        {!isRoutesPage && (
-          <Link href="/dashboard/routes">
-            <Button
-              className="fixed bottom-8 right-8 w-14 h-14 rounded-md shadow-xl flex items-center justify-center bg-[#1E293B] text-white hover:bg-slate-800 hover:-translate-y-1 transition-all z-50"
-              aria-label="Ver rutas"
-            >
-              <span className="material-symbols-outlined text-2xl">map</span>
-            </Button>
-          </Link>
-        )}
       </div>
   );
 }
