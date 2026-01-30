@@ -21,6 +21,7 @@ import type { DragEndEvent } from '@dnd-kit/core';
 
 function formatDuration(duration: string): string {
     const seconds = parseInt(duration.replace('s', ''), 10);
+    if (isNaN(seconds)) return '0m';
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     return `${h > 0 ? `${h}h ` : ''}${m}m`;
@@ -113,8 +114,8 @@ function DriverColumn({ driver, route, clusterIndex }: { driver: StaffMember, ro
             
             <div className={cn("flex-1 flex flex-col min-h-0", isDragging && "opacity-20")}>
             {route ? (
-                <>
-                    <div className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar bg-white">
+                <div className="flex-1 flex flex-col bg-white overflow-hidden">
+                    <div className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
                         <div className="flex items-center gap-2 mb-2">
                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Secuencia de Entrega</span>
                              <div className="h-px flex-1 bg-slate-100"></div>
@@ -135,7 +136,7 @@ function DriverColumn({ driver, route, clusterIndex }: { driver: StaffMember, ro
                              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">distance</span> {(route.distance / 1000).toFixed(1)} km</span>
                         </div>
                     </div>
-                </>
+                </div>
             ) : (
                  <div className="flex-1 flex flex-col items-center justify-center p-6 bg-white border-2 border-dashed border-slate-100 m-4 rounded-xl">
                     <span className="material-symbols-outlined text-slate-200 text-4xl mb-2">move_to_inbox</span>
@@ -175,6 +176,14 @@ export default function RoutesPage() {
         handleTimeSlotChange(timeSlot);
     }, []);
 
+    const unassignedClusters = useMemo(() => {
+        const assignedIndices = new Set(Object.values(assignedRoutes));
+        return clusters.map((cluster, index) => ({ cluster, index }))
+                       .filter(({ index }) => !assignedIndices.has(index));
+    }, [clusters, assignedRoutes]);
+
+    const unassignedClusterIndices = useMemo(() => new Set(unassignedClusters.map(c => c.index)), [unassignedClusters]);
+
     const handleDragEnd = (event: DragEndEvent) => {
         setActiveId(null);
         const { active, over } = event;
@@ -182,33 +191,60 @@ export default function RoutesPage() {
     
         const draggedClusterIndex = active.data.current.clusterIndex as number;
         const targetId = over.id;
+        const overIsDriver = over.data.current?.type === 'driver';
+        const overIsUnassignedContainer = targetId === 'unassigned';
+        
+        let overIsUnassignedItem = false;
+        if (over.data.current?.type === 'cluster') {
+            const overClusterIndex = over.data.current.clusterIndex;
+            if (unassignedClusterIndices.has(overClusterIndex)) {
+                overIsUnassignedItem = true;
+            }
+        }
     
-        startTransition(() => {
-            setAssignedRoutes(prev => {
-                const newAssignments = { ...prev };
-    
-                const sourceDriverId = Object.keys(newAssignments).find(key => newAssignments[key] === draggedClusterIndex);
-                if (sourceDriverId) {
-                    delete newAssignments[sourceDriverId];
-                }
-    
-                if (targetId && targetId !== 'unassigned') { // If dropped on a driver
-                    const targetDriverId = String(targetId);
-                    const currentRouteOfTarget = newAssignments[targetDriverId];
-    
-                    // Swap: find the driver who had the route we are dropping on and give them the old route of our source
-                    if (currentRouteOfTarget !== undefined && sourceDriverId) {
-                        newAssignments[sourceDriverId] = currentRouteOfTarget;
+        // Target: Unassigned Area
+        if (overIsUnassignedContainer || overIsUnassignedItem) {
+            startTransition(() => {
+                setAssignedRoutes(prev => {
+                    const newAssignments = {...prev};
+                    // Find driver who had this route and remove it
+                    const sourceDriverId = Object.keys(newAssignments).find(key => newAssignments[key] === draggedClusterIndex);
+                    if (sourceDriverId) {
+                        delete newAssignments[sourceDriverId];
                     }
-                    newAssignments[targetDriverId] = draggedClusterIndex;
-                }
-                
-                return newAssignments;
+                    return newAssignments;
+                });
             });
-        });
+            return;
+        }
+    
+        // Target: Driver Column
+        if (overIsDriver) {
+            const targetDriverId = String(targetId);
+            startTransition(() => {
+                setAssignedRoutes(prev => {
+                    const newAssignments = { ...prev };
+                    const sourceDriverId = Object.keys(newAssignments).find(key => newAssignments[key] === draggedClusterIndex);
+                    if (sourceDriverId) {
+                        delete newAssignments[sourceDriverId];
+                    }
+    
+                    const existingRouteOfTarget = newAssignments[targetDriverId];
+                    if (existingRouteOfTarget !== undefined && sourceDriverId) {
+                        // Swap
+                        newAssignments[sourceDriverId] = existingRouteOfTarget;
+                    }
+                    
+                    newAssignments[targetDriverId] = draggedClusterIndex;
+                    return newAssignments;
+                });
+            });
+            return;
+        }
     };
 
     const handleTimeSlotChange = (value: 'morning' | 'afternoon' | 'evening') => {
+        if (!value) return;
         setTimeSlot(value);
         setClusters([]);
         setStaff([]);
@@ -226,11 +262,6 @@ export default function RoutesPage() {
         });
     }
 
-    const unassignedClusters = useMemo(() => {
-        const assignedIndices = new Set(Object.values(assignedRoutes));
-        return clusters.map((cluster, index) => ({ cluster, index }))
-                       .filter(({ index }) => !assignedIndices.has(index));
-    }, [clusters, assignedRoutes]);
     
     return (
        <DndContext 
@@ -239,7 +270,7 @@ export default function RoutesPage() {
             onDragCancel={() => setActiveId(null)}
             collisionDetection={closestCenter}
         >
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden">
             <div className="px-8 py-6 flex flex-col gap-4 bg-white border-b border-slate-200 shrink-0">
                 <div className="flex justify-between items-end">
                     <div>
@@ -249,7 +280,7 @@ export default function RoutesPage() {
                     <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Franja Horaria</label>
                          <div className="relative">
-                            <Select onValueChange={handleTimeSlotChange} defaultValue={timeSlot} disabled={isPending}>
+                            <Select onValueChange={handleTimeSlotChange} value={timeSlot} disabled={isPending}>
                                 <SelectTrigger className="appearance-none bg-slate-100 border-none rounded-xl px-4 py-2.5 text-sm font-semibold text-primary focus:ring-2 focus:ring-primary/10 cursor-pointer min-w-[200px]">
                                     <SelectValue />
                                 </SelectTrigger>
