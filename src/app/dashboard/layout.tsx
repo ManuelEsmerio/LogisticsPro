@@ -19,8 +19,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-      <div className="min-h-screen w-full flex flex-col">
-        <header className="sticky top-0 z-50 bg-primary border-b border-white/10 px-6 py-3 text-primary-foreground">
+      <div className="min-h-screen w-full flex flex-col bg-silk-gray dark:bg-background-dark">
+        <header className="sticky top-0 z-50 bg-[#1E293B] border-b border-white/10 px-6 py-3 text-white">
             <div className="max-w-[1400px] mx-auto flex items-center justify-between">
                 <div className="flex items-center gap-8">
                     <Logo />
@@ -44,11 +44,10 @@ export default function DashboardLayout({
         </main>
         <Link href="/dashboard/routes">
           <Button
-            variant="default"
-            className="fixed bottom-8 right-8 w-14 h-14 rounded-md shadow-xl flex items-center justify-center hover:-translate-y-1 transition-all z-50 bg-primary text-primary-foreground"
+            className="fixed bottom-8 right-8 w-14 h-14 rounded-md shadow-xl flex items-center justify-center hover:-translate-y-1 transition-all z-50 bg-[#1E293B] text-white hover:bg-slate-800"
             aria-label="Ver rutas"
           >
-            <span className="material-symbols-outlined text-2xl">support_agent</span>
+            <span className="material-symbols-outlined text-2xl">map</span>
           </Button>
         </Link>
       </div>

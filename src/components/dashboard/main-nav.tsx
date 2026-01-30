@@ -22,17 +22,17 @@ export function MainNav() {
             key={label}
             href={href}
             className={cn(
-              "transition-colors text-sm font-medium pb-1",
-              isActive 
-                ? "text-white font-semibold border-b-2 border-white" 
-                : "text-slate-300 hover:text-white"
+              "transition-colors text-sm font-medium pb-1 text-white",
+              isActive
+                ? "font-semibold border-b-2 border-white"
+                : "opacity-70 hover:opacity-100"
             )}
           >
             {label}
           </Link>
         );
       })}
-       <a className="text-slate-500 text-sm font-medium cursor-not-allowed">Inventario</a>
+       <a className="text-sm font-medium cursor-not-allowed text-white opacity-50">Inventario</a>
     </nav>
   );
 }
