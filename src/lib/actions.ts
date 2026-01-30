@@ -149,21 +149,24 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
 
 
         const clusteredRoutesPromises = clustersIndices.map(async (clusterOrderIndices: number[]) => {
-            const waypoints: Waypoint[] = clusterOrderIndices.map(i => {
-                const order = deliveryOrders[i];
-                return {
-                    orderNumber: order.orderNumber,
-                    address: order.address,
-                    latitude: order.latitude,
-                    longitude: order.longitude,
-                };
-            });
+            const ordersInCluster = clusterOrderIndices.map(i => deliveryOrders[i]);
+
+            const waypoints: Waypoint[] = ordersInCluster.map(order => ({
+                orderNumber: order.orderNumber,
+                address: order.address,
+                latitude: order.latitude,
+                longitude: order.longitude,
+            }));
 
             const { orderedWaypoints } = await optimizeRoute(waypoints);
 
+            const orderedOrders = orderedWaypoints.map(wp => 
+                ordersInCluster.find(o => o.orderNumber === wp.orderNumber)
+            ).filter((o): o is Order => !!o);
+
             return {
                 timeSlot,
-                orders: orderedWaypoints,
+                orders: orderedOrders,
             };
         });
 

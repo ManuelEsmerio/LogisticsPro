@@ -127,7 +127,7 @@ export default function RoutesPage() {
             if (result && !result.error) {
                 setClusters(result.clusteredRoutes);
 
-                const ordersFromClusters = result.clusteredRoutes.flatMap(c => c.orders as unknown as Order[]);
+                const ordersFromClusters = result.clusteredRoutes.flatMap(c => c.orders);
                 setAllOrders(ordersFromClusters);
                 
                 if(result.staff) {
