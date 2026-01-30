@@ -42,7 +42,7 @@ async function geocodeAddress(address: string): Promise<{ latitude: number; long
 async function optimizeRoute(waypoints: Waypoint[]) {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     if (!apiKey || waypoints.length === 0) {
-        return { orderedWaypoints: waypoints };
+        return { orderedWaypoints: waypoints, distance: 0, duration: '0s' };
     }
 
     const API_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
@@ -67,26 +67,35 @@ async function optimizeRoute(waypoints: Waypoint[]) {
             headers: {
                 'Content-Type': 'application/json',
                 'X-Goog-Api-Key': apiKey,
-                'X-Goog-FieldMask': 'routes.optimizedIntermediateWaypointIndex'
+                'X-Goog-FieldMask': 'routes.optimizedIntermediateWaypointIndex,routes.distanceMeters,routes.duration'
             },
             body: JSON.stringify(requestBody),
         });
 
         const data = await response.json();
 
-        if (data.routes && data.routes[0] && data.routes[0].optimizedIntermediateWaypointIndex) {
-            const optimizedIndices = data.routes[0].optimizedIntermediateWaypointIndex;
+        if (!data.routes || data.routes.length === 0) {
+            return { orderedWaypoints: waypoints, distance: 0, duration: '0s' };
+        }
+        
+        const route = data.routes[0];
+        const distance = route.distanceMeters || 0;
+        const duration = route.duration || '0s';
+
+
+        if (route.optimizedIntermediateWaypointIndex) {
+            const optimizedIndices = route.optimizedIntermediateWaypointIndex;
             const orderedWaypoints = [origin];
             optimizedIndices.forEach((index: number) => {
                 orderedWaypoints.push(intermediates[index]);
             });
-            return { orderedWaypoints };
+            return { orderedWaypoints, distance, duration };
         }
         // If optimization fails, return original order
-        return { orderedWaypoints: waypoints };
+        return { orderedWaypoints: waypoints, distance, duration };
     } catch (error) {
         console.error('Error calling Routes API:', error);
-        return { orderedWaypoints: waypoints }; // Fallback
+        return { orderedWaypoints: waypoints, distance: 0, duration: '0s' }; // Fallback
     }
 }
 
@@ -158,7 +167,7 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
                 longitude: order.longitude,
             }));
 
-            const { orderedWaypoints } = await optimizeRoute(waypoints);
+            const { orderedWaypoints, distance, duration } = await optimizeRoute(waypoints);
 
             const orderedOrders = orderedWaypoints.map(wp => 
                 ordersInCluster.find(o => o.orderNumber === wp.orderNumber)
@@ -167,6 +176,8 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
             return {
                 timeSlot,
                 orders: orderedOrders,
+                distance,
+                duration,
             };
         });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useMemo } from 'react';
 import {
   Select,
   SelectContent,
@@ -15,42 +15,64 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { DndContext, useDraggable, useDroppable, DragOverlay, closestCenter } from '@dnd-kit/core';
+import { DndContext, useDraggable, useDroppable, DragOverlay, closestCenter, UniqueIdentifier } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 
-function UnassignedOrderCard({ order, isOverlay = false }: { order: Order; isOverlay?: boolean }) {
-    const {attributes, listeners, setNodeRef, transform} = useDraggable({
-        id: order.id,
-        data: { order }
+
+function formatDuration(duration: string): string {
+    const seconds = parseInt(duration.replace('s', ''), 10);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return `${h > 0 ? `${h}h ` : ''}${m}m`;
+}
+
+function UnassignedRouteCard({ route, clusterIndex, isOverlay = false }: { route: ClusteredRoute; clusterIndex: number; isOverlay?: boolean }) {
+    const { attributes, listeners, setNodeRef, transform } = useDraggable({
+        id: clusterIndex,
+        data: { route, clusterIndex }
     });
 
     const style = transform ? {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
     } : undefined;
 
-    const zoneConfig = {
+    const zoneConfig = useMemo(() => ({
         morning: { color: 'border-l-zone-north', text: 'text-zone-north', name: 'ZONA NORTE' },
         afternoon: { color: 'border-l-zone-center', text: 'text-zone-center', name: 'ZONA CENTRO' },
         evening: { color: 'border-l-zone-south', text: 'text-zone-south', name: 'ZONA SUR' },
-    }
-    const config = zoneConfig[order.deliveryTimeSlot || 'morning'];
+    }), []);
     
+    const config = zoneConfig[route.timeSlot || 'morning'];
+
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn("bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing border-l-4", config.color, isOverlay && "shadow-2xl")}>
-            <div className="flex justify-between items-start mb-1">
-                <span className={cn("text-[10px] font-bold", config.text)}>{config.name} • {order.orderNumber}</span>
-                <span className="material-symbols-outlined text-slate-300 text-lg">drag_indicator</span>
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn("route-card", config.color, isOverlay && "shadow-2xl ring-2 ring-primary")}>
+            <div className="flex justify-between items-start mb-2">
+                <div>
+                    <span className={cn("text-[10px] font-bold uppercase tracking-wider", config.text)}>{config.name}</span>
+                    <h3 className="text-sm font-bold text-slate-800">Bloque #{clusterIndex + 1}</h3>
+                </div>
+                <span className="material-symbols-outlined text-slate-300 cursor-grab active:cursor-grabbing">drag_indicator</span>
             </div>
-            <p className="text-sm font-semibold text-slate-800">{order.address}</p>
-            <div className="flex items-center gap-3 mt-2 text-slate-400">
-                <span className="flex items-center gap-1 text-[11px]"><span className="material-symbols-outlined text-sm">schedule</span> {order.deliveryTime ? new Date(order.deliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
-                {order.priority === 'Alta' && <span className="flex items-center gap-1 text-[11px]"><span className="material-symbols-outlined text-sm">priority_high</span> Urgente</span>}
+            <div className="grid grid-cols-2 gap-2 mt-3">
+                <div className="flex items-center gap-1.5 text-slate-500">
+                    <span className="material-symbols-outlined text-sm">inventory_2</span>
+                    <span className="text-[11px] font-medium">{route.orders.length} Pedidos</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-500">
+                    <span className="material-symbols-outlined text-sm">distance</span>
+                    <span className="text-[11px] font-medium">{(route.distance / 1000).toFixed(1)} km</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-500 col-span-2">
+                    <span className="material-symbols-outlined text-sm">schedule</span>
+                    <span className="text-[11px] font-medium">Tiempo est: {formatDuration(route.duration)}</span>
+                </div>
             </div>
         </div>
     );
 }
 
-function DriverColumn({ driver, route, onAssignRoute }: { driver: StaffMember, route: ClusteredRoute | null, onAssignRoute: (driverId: string, routeId: number) => void }) {
+function DriverColumn({ driver, route, clusterIndex }: { driver: StaffMember, route: ClusteredRoute | null, clusterIndex: number | null }) {
     const { isOver, setNodeRef } = useDroppable({
         id: driver.id,
     });
@@ -58,17 +80,18 @@ function DriverColumn({ driver, route, onAssignRoute }: { driver: StaffMember, r
     const capacity = 12; // Mock capacity
 
     return (
-        <div ref={setNodeRef} className={cn("bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-full min-w-[300px] transition-colors", isOver && "bg-slate-100")}>
+        <div ref={setNodeRef} className={cn("driver-column", isOver && "bg-slate-100")}>
             <div className="p-5 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
                 <div className="flex items-center gap-4 mb-4">
                     <div className="relative">
                         <Image alt={driver.name} src={driver.avatarUrl} width={48} height={48} className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-sm"/>
-                        {driver.status === 'Activo' && <span className="absolute -bottom-1 -right-1 bg-accent w-3.5 h-3.5 rounded-full border-2 border-white"></span>}
+                        <span className={cn("absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white", driver.status === 'Activo' ? 'bg-accent' : 'bg-slate-300')}></span>
                     </div>
                     <div className="flex-1">
                         <h3 className="font-bold text-primary">{driver.name}</h3>
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{driver.role}</p>
                     </div>
+                    {route && clusterIndex !== null && <div className="bg-zone-center/10 px-2 py-1 rounded text-[10px] font-bold text-zone-center">RUTA #{clusterIndex + 1}</div>}
                 </div>
                 <div className="space-y-1.5">
                     <div className="flex justify-between items-end">
@@ -80,36 +103,40 @@ function DriverColumn({ driver, route, onAssignRoute }: { driver: StaffMember, r
                     </div>
                 </div>
             </div>
-            <div className="flex-1 p-4 space-y-3 overflow-y-auto custom-scrollbar bg-white">
-                {orders.map((order, index) => (
-                    <div key={order.orderNumber} className="p-3 bg-slate-50 border border-slate-100 rounded-lg text-sm group hover:border-primary/20 transition-all">
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="font-bold text-primary text-xs">#{index + 1} • {order.address.split(',')[0]}</span>
-                            <span className="material-symbols-outlined text-slate-300 text-sm">drag_handle</span>
+            
+            {orders.length > 0 ? (
+                <>
+                    <div className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar bg-white">
+                        <div className="flex items-center gap-2 mb-2">
+                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Secuencia de Entrega</span>
+                             <div className="h-px flex-1 bg-slate-100"></div>
                         </div>
-                        <p className="text-slate-600 font-medium text-xs">{order.address}</p>
+                        {orders.map((order, index) => (
+                            <div key={order.id} className="p-3 bg-slate-50 border border-slate-100 rounded-lg group hover:border-primary/20 transition-all cursor-move">
+                                <div className="flex justify-between items-center">
+                                    <span className="font-bold text-primary text-[11px]">#{index + 1} • {order.deliveryTime ? new Date(order.deliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                                    <span className="material-symbols-outlined text-slate-300 text-xs">reorder</span>
+                                </div>
+                                <p className="text-slate-600 font-medium text-[11px] truncate">{order.address}</p>
+                            </div>
+                        ))}
                     </div>
-                ))}
-                <div className="h-16 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer">
-                    <span className="material-symbols-outlined text-xl">add_circle</span>
-                    <span className="text-[10px] font-bold uppercase mt-1">Soltar pedido</span>
-                </div>
-            </div>
-            <div className="p-4 bg-slate-50 border-t border-slate-100 rounded-b-2xl">
-                 <div className="flex justify-between items-center">
-                    <div className="text-[10px] font-medium text-slate-500">
-                        <p className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">timer</span> {orders.length > 0 ? '2h 15m est.' : 'N/A'}</p>
-                        <p className="flex items-center gap-1 mt-0.5"><span className="material-symbols-outlined text-xs">distance</span> {orders.length > 0 ? '14.2 km' : 'N/A'}</p>
+                    <div className="p-4 bg-slate-50 border-t border-slate-100 rounded-b-2xl">
+                         <div className="flex justify-between items-center text-[10px] font-bold text-slate-500">
+                             {route && <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">timer</span> {formatDuration(route.duration)} est.</span>}
+                             {route && <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">distance</span> {(route.distance / 1000).toFixed(1)} km</span>}
+                        </div>
                     </div>
-                    <button className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:text-primary transition-colors">
-                        <span className="material-symbols-outlined text-lg">map</span>
-                    </button>
+                </>
+            ) : (
+                 <div ref={setNodeRef} className="flex-1 flex flex-col items-center justify-center p-6 bg-white border-2 border-dashed border-slate-100 m-4 rounded-xl">
+                    <span className="material-symbols-outlined text-slate-200 text-4xl mb-2">move_to_inbox</span>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Arrastra un bloque de ruta aquí</p>
                 </div>
-            </div>
+            )}
         </div>
     );
 }
-
 
 export default function RoutesPage() {
     const [isMounted, setIsMounted] = useState(false);
@@ -117,12 +144,15 @@ export default function RoutesPage() {
     const { toast } = useToast();
     const [timeSlot, setTimeSlot] = useState<'morning' | 'afternoon' | 'evening'>('morning');
     const [clusters, setClusters] = useState<ClusteredRoute[]>([]);
-    const [allOrders, setAllOrders] = useState<Order[]>([]);
     const [staff, setStaff] = useState<StaffMember[]>([]);
-    const [assignedDrivers, setAssignedDrivers] = useState<Record<number, string>>({});
-    const [activeId, setActiveId] = useState<string | null>(null);
+    const [assignedRoutes, setAssignedRoutes] = useState<Record<string, number>>({}); // driverId -> clusterIndex
+    const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
 
-    const activeOrder = activeId ? allOrders.find(o => o.id === activeId) : null;
+    const activeCluster = useMemo(() => {
+      if (typeof activeId === 'number') return clusters[activeId];
+      return null;
+    }, [activeId, clusters]);
+
     const { setNodeRef: unassignedDropRef } = useDroppable({ id: 'unassigned' });
 
 
@@ -135,34 +165,28 @@ export default function RoutesPage() {
         setActiveId(null);
         const { active, over } = event;
         if (!over) return;
-
-        const orderId = String(active.id);
-        const droppableId = String(over.id); // driver.id or 'unassigned'
-
-        const clusterIndex = clusters.findIndex(c => c.orders.some(o => o.id === orderId));
-        if (clusterIndex === -1) return;
-
+    
+        const draggedClusterIndex = Number(active.id);
+        const targetDriverId = over.id === 'unassigned' ? null : String(over.id);
+    
         startTransition(() => {
-            setAssignedDrivers(prev => {
+            setAssignedRoutes(prev => {
                 const newAssignments = { ...prev };
-
-                // Remove the cluster's previous assignment
-                const oldAssignmentKey = Object.keys(newAssignments).find(key => Number(key) === clusterIndex);
-                if (oldAssignmentKey) {
-                    delete newAssignments[clusterIndex];
+    
+                const sourceDriverId = Object.keys(newAssignments).find(key => newAssignments[key] === draggedClusterIndex);
+                if (sourceDriverId) {
+                    delete newAssignments[sourceDriverId];
                 }
-
-                // Remove the target driver's previous assignment
-                const targetDriverOldAssignmentKey = Object.keys(newAssignments).find(key => newAssignments[Number(key)] === droppableId);
-                if (targetDriverOldAssignmentKey) {
-                    delete newAssignments[Number(targetDriverOldAssignmentKey)];
+    
+                if (targetDriverId) {
+                    const targetDriverCurrentRoute = newAssignments[targetDriverId];
+                    if (targetDriverCurrentRoute !== undefined && targetDriverCurrentRoute !== null) {
+                        const driverWithSwappedRoute = Object.keys(newAssignments).find(key => newAssignments[key] === targetDriverCurrentRoute);
+                         if(driverWithSwappedRoute) delete newAssignments[driverWithSwappedRoute];
+                    }
+                    newAssignments[targetDriverId] = draggedClusterIndex;
                 }
-                
-                // Create new assignment if not dropping in unassigned
-                if (droppableId !== 'unassigned') {
-                    newAssignments[clusterIndex] = droppableId;
-                }
-                
+    
                 return newAssignments;
             });
         });
@@ -171,15 +195,12 @@ export default function RoutesPage() {
     const handleTimeSlotChange = (value: 'morning' | 'afternoon' | 'evening') => {
         setTimeSlot(value);
         setClusters([]);
-        setAllOrders([]);
-        setAssignedDrivers({});
+        setStaff([]);
+        setAssignedRoutes({});
         startTransition(async () => {
             const result = await getClusteredRoutesAction(value);
             if (result && result.clusteredRoutes) {
                 setClusters(result.clusteredRoutes);
-                const ordersFromClusters = result.clusteredRoutes.flatMap(c => c.orders);
-                setAllOrders(ordersFromClusters);
-                
                 if(result.staff) {
                     setStaff(result.staff);
                 }
@@ -189,15 +210,16 @@ export default function RoutesPage() {
         });
     }
 
-    const unassignedOrders = allOrders.filter(order => {
-        const clusterIndex = clusters.findIndex(c => c.orders.some(o => o.id === order.id));
-        return clusterIndex !== -1 && assignedDrivers[clusterIndex] === undefined;
-    });
+    const unassignedClusters = useMemo(() => {
+        const assignedIndices = new Set(Object.values(assignedRoutes));
+        return clusters.map((cluster, index) => ({ cluster, index }))
+                       .filter(({ index }) => !assignedIndices.has(index));
+    }, [clusters, assignedRoutes]);
     
     return (
-       <div className="h-full font-sans text-slate-900 flex flex-col overflow-hidden">
+       <div className="h-full flex flex-col overflow-hidden">
             <DndContext 
-                onDragStart={(event) => setActiveId(String(event.active.id))}
+                onDragStart={(event) => setActiveId(event.active.id)}
                 onDragEnd={handleDragEnd}
                 onDragCancel={() => setActiveId(null)}
                 collisionDetection={closestCenter}
@@ -206,7 +228,7 @@ export default function RoutesPage() {
                     <div className="flex justify-between items-end">
                         <div>
                             <h1 className="text-2xl font-bold text-primary tracking-tight">Optimización y Asignación de Rutas</h1>
-                            <p className="text-slate-500 text-sm mt-1">Selecciona un horario para optimizar las rutas de entrega y asignarlas a los transportistas.</p>
+                            <p className="text-slate-500 text-sm mt-1">Arrastra bloques de rutas sugeridas a los transportistas disponibles.</p>
                         </div>
                         <div className="flex flex-col gap-1.5">
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Franja Horaria</label>
@@ -226,35 +248,35 @@ export default function RoutesPage() {
                     </div>
                 </div>
                  <div className="flex-1 flex overflow-hidden">
-                    <aside className="w-80 bg-slate-50 border-r border-slate-200 flex flex-col shrink-0">
+                    <aside ref={unassignedDropRef} className="w-80 bg-slate-50 border-r border-slate-200 flex flex-col shrink-0">
                         <div className="p-4 border-b border-slate-200 bg-white/50">
                             <div className="flex items-center justify-between mb-3">
                                 <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-sm">list_alt</span>
-                                    Pedidos sin asignar
+                                    <span className="material-symbols-outlined text-sm">auto_graph</span>
+                                    Rutas Sugeridas
                                 </h2>
-                                <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unassignedOrders.length}</span>
+                                <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unassignedClusters.length} BLOQUES</span>
                             </div>
                         </div>
-                        <div ref={unassignedDropRef} className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
-                            {isPending && Array.from({length: 5}).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
-                            {!isPending && unassignedOrders.map(order => <UnassignedOrderCard key={order.id} order={order} />)}
-                             {!isPending && unassignedOrders.length === 0 && (
-                                <div className="text-center text-slate-400 text-sm py-10">No hay pedidos sin asignar.</div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+                            {isPending && Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}
+                            {!isPending && unassignedClusters.map(({ cluster, index }) => <UnassignedRouteCard key={index} route={cluster} clusterIndex={index} />)}
+                             {!isPending && unassignedClusters.length === 0 && (
+                                <div className="text-center text-slate-400 text-sm py-10">No hay rutas sin asignar.</div>
                             )}
                         </div>
                     </aside>
                     <section className="flex-1 bg-silk-gray p-6 overflow-x-auto custom-scrollbar flex gap-6">
-                        {isPending && Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-full min-w-[300px] rounded-2xl" />)}
+                        {isPending && Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-full min-w-[320px] rounded-2xl" />)}
                         
                         {!isPending && staff.map(driver => {
-                            const assignedClusterIndexStr = Object.keys(assignedDrivers).find(key => assignedDrivers[parseInt(key)] === driver.id);
-                            const route = assignedClusterIndexStr !== undefined ? clusters[parseInt(assignedClusterIndexStr)] : null;
-                            return <DriverColumn key={driver.id} driver={driver} route={route} onAssignRoute={() => {}} />
+                           const assignedClusterIndex = assignedRoutes[driver.id];
+                           const route = assignedClusterIndex !== undefined && assignedClusterIndex !== null ? clusters[assignedClusterIndex] : null;
+                           return <DriverColumn key={driver.id} driver={driver} route={route} clusterIndex={assignedClusterIndex} />
                         })}
                         
                         {!isPending && (
-                             <div className="min-w-[300px] flex items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl bg-white/40 hover:bg-white hover:border-slate-300 transition-all cursor-pointer group">
+                             <div className="min-w-[320px] flex items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl bg-white/40 hover:bg-white hover:border-slate-300 transition-all cursor-pointer group">
                                 <div className="text-center">
                                     <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mx-auto mb-3 group-hover:scale-110 transition-transform">
                                         <span className="material-symbols-outlined text-2xl">person_add</span>
@@ -266,7 +288,7 @@ export default function RoutesPage() {
                     </section>
                 </div>
                  <DragOverlay>
-                    {activeOrder ? <UnassignedOrderCard order={activeOrder} isOverlay /> : null}
+                    {activeCluster ? <UnassignedRouteCard route={activeCluster} clusterIndex={Number(activeId)} isOverlay /> : null}
                 </DragOverlay>
             </DndContext>
             <footer className="h-20 bg-white border-t border-slate-200 flex items-center justify-between px-8 shrink-0 z-40">
@@ -281,8 +303,8 @@ export default function RoutesPage() {
                     <div className="h-8 w-px bg-slate-200"></div>
                     <div className="flex gap-8">
                         <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Pedidos</p>
-                            <p className="text-sm font-bold text-primary">{allOrders.length}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bloques Pendientes</p>
+                            <p className="text-sm font-bold text-primary">{unassignedClusters.length}</p>
                         </div>
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Activos</p>
@@ -292,7 +314,7 @@ export default function RoutesPage() {
                 </div>
                 <div className="flex items-center gap-3">
                     <Button variant="outline" className="px-6 py-2.5 rounded-xl border-slate-200 text-sm font-bold text-primary hover:bg-slate-50 transition-all">
-                        Previsualizar Rutas
+                        Re-calcular Rutas
                     </Button>
                     <Button className="px-8 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-slate-800 transition-all flex items-center gap-2">
                         <span className="material-symbols-outlined text-xl">local_shipping</span>
