@@ -2,79 +2,16 @@
 import { MainNav } from "@/components/dashboard/main-nav";
 import Logo from "@/components/logo";
 import { Input } from "@/components/ui/input";
-import { ChevronsLeft, Search } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarTrigger,
-  SidebarContent,
-  SidebarHeader,
-  SidebarInset,
-  SidebarFooter,
-  useSidebar,
-} from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import dynamic from 'next/dynamic';
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
 
 const UserNav = dynamic(() => import('@/components/dashboard/user-nav').then(mod => mod.UserNav), {
   ssr: false,
-  loading: () => <Skeleton className="h-9 w-9 rounded-full" />,
+  loading: () => <Skeleton className="h-10 w-10 rounded-full" />,
 });
-
-function DashboardLayoutContent({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { toggleSidebar } = useSidebar();
-  return (
-    <>
-      <Sidebar collapsible="icon">
-        <SidebarHeader className="border-b justify-center">
-            <Logo />
-        </SidebarHeader>
-        <SidebarContent>
-            <MainNav />
-        </SidebarContent>
-        <SidebarFooter className="mt-auto flex p-2 border-t">
-          <Button
-              variant="ghost"
-              className="w-full justify-start gap-2"
-              onClick={toggleSidebar}
-          >
-              <ChevronsLeft className="shrink-0 size-4 transition-transform duration-200 group-data-[state=collapsed]:rotate-180" />
-          </Button>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <div className="flex flex-col h-full">
-          <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
-            <SidebarTrigger className="shrink-0 lg:hidden" />
-            <div className="w-full flex-1">
-              <form>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Buscar pedidos..."
-                    className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/3"
-                  />
-                </div>
-              </form>
-            </div>
-            <ThemeToggle />
-            <UserNav />
-          </header>
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-auto">
-            {children}
-          </main>
-        </div>
-      </SidebarInset>
-    </>
-  );
-}
 
 export default function DashboardLayout({
   children,
@@ -82,8 +19,38 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider>
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
-    </SidebarProvider>
+      <div className="min-h-screen w-full flex flex-col">
+        <header className="sticky top-0 z-50 bg-primary border-b border-white/10 px-6 py-3 text-primary-foreground">
+            <div className="max-w-[1400px] mx-auto flex items-center justify-between">
+                <div className="flex items-center gap-8">
+                    <Logo />
+                    <MainNav />
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className="relative hidden sm:block">
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">search</span>
+                        <Input 
+                            className="pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-700 border-none rounded-md text-sm focus:ring-2 focus:ring-slate-400 w-64 text-foreground"
+                            placeholder="Buscar pedido..."
+                        />
+                    </div>
+                    <ThemeToggle />
+                    <UserNav />
+                </div>
+            </div>
+        </header>
+        <main className="max-w-[1400px] mx-auto w-full p-6 space-y-6">
+            {children}
+        </main>
+        <Link href="/dashboard/routes">
+          <Button
+            variant="default"
+            className="fixed bottom-8 right-8 w-14 h-14 rounded-md shadow-xl flex items-center justify-center hover:-translate-y-1 transition-all z-50 bg-primary text-primary-foreground"
+            aria-label="Ver rutas"
+          >
+            <span className="material-symbols-outlined text-2xl">map</span>
+          </Button>
+        </Link>
+      </div>
   );
 }

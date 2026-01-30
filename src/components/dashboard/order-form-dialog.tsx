@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -69,9 +69,11 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
           orderNumber: order?.orderNumber || "",
           address: order?.address || "",
           recipientName: order?.recipientName || "",
+          product: order?.product || "",
           contactNumber: order?.contactNumber || "",
           deliveryType: order?.deliveryType || "delivery",
           paymentStatus: order?.paymentStatus || "due",
+          priority: order?.priority || "Media",
           deliveryTimeType: order?.deliveryTime ? "exact_time" : "timeslot",
           deliveryTimeSlot: order?.deliveryTimeSlot || "morning",
           deliveryTime: order?.deliveryTime ? new Date(order.deliveryTime) : null,
@@ -79,6 +81,7 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
     });
     
     const deliveryTimeType = form.watch("deliveryTimeType");
+    const deliveryType = form.watch("deliveryType");
 
     const onSubmit = (data: OrderFormValues) => {
         startTransition(async () => {
@@ -97,21 +100,18 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
     };
 
     const trigger = isEditMode ? (
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
             {children}
         </DropdownMenuItem>
     ) : (
-        <Button size="sm" className="h-8 gap-1">
-            <PlusCircle className="h-3.5 w-3.5" />
-            {children}
-        </Button>
+        <DialogTrigger asChild>
+          {children}
+        </DialogTrigger>
     )
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
         {trigger}
-      </DialogTrigger>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
           <DialogTitle className="font-headline">{isEditMode ? "Editar Pedido" : "Crear Nuevo Pedido"}</DialogTitle>
@@ -139,6 +139,13 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
                           </FormItem>
                       )} />
                   </div>
+                  <FormField control={form.control} name="product" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Producto</FormLabel>
+                          <FormControl><Input {...field} placeholder="Ej: Ramo de Rosas (12)"/></FormControl>
+                          <FormMessage />
+                      </FormItem>
+                  )} />
                   <FormField control={form.control} name="address" render={({ field }) => (
                       <FormItem>
                           <FormLabel>Dirección</FormLabel>
@@ -153,10 +160,10 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
                           <FormMessage />
                       </FormItem>
                   )} />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <FormField control={form.control} name="deliveryType" render={({ field }) => (
                           <FormItem>
-                              <FormLabel>Tipo de Entrega</FormLabel>
+                              <FormLabel>Tipo</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                   <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                   <SelectContent>
@@ -173,15 +180,33 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                   <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                   <SelectContent>
-                                      <SelectItem value="paid">Pagado</SelectItem>
                                       <SelectItem value="due">Pendiente</SelectItem>
+                                      <SelectItem value="assigned">Asignado</SelectItem>
+                                      <SelectItem value="paid">Pagado</SelectItem>
+                                  </SelectContent>
+                              </Select>
+                              <FormMessage />
+                          </FormItem>
+                      )} />
+                      <FormField control={form.control} name="priority" render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Prioridad</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                  <SelectContent>
+                                      <SelectItem value="Baja">Baja</SelectItem>
+                                      <SelectItem value="Media">Media</SelectItem>
+                                      <SelectItem value="Alta">Alta</SelectItem>
                                   </SelectContent>
                               </Select>
                               <FormMessage />
                           </FormItem>
                       )} />
                   </div>
-                  <FormField control={form.control} name="deliveryTimeType" render={({ field }) => (
+                  
+                  {deliveryType === "delivery" && (
+                    <>
+                    <FormField control={form.control} name="deliveryTimeType" render={({ field }) => (
                       <FormItem className="space-y-3">
                           <FormLabel>Hora de Entrega</FormLabel>
                           <FormControl>
@@ -192,45 +217,47 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
                           </FormControl>
                           <FormMessage />
                       </FormItem>
-                  )} />
+                    )} />
 
-                  {deliveryTimeType === 'timeslot' && (
-                      <FormField control={form.control} name="deliveryTimeSlot" render={({ field }) => (
-                          <FormItem>
-                              <FormLabel>Franja Horaria</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
-                                  <FormControl><SelectTrigger><SelectValue placeholder="Selecciona una franja horaria" /></SelectTrigger></FormControl>
-                                  <SelectContent>
-                                      <SelectItem value="morning">Mañana (9am - 12pm)</SelectItem>
-                                      <SelectItem value="afternoon">Tarde (12pm - 5pm)</SelectItem>
-                                      <SelectItem value="evening">Noche (5pm - 9pm)</SelectItem>
-                                  </SelectContent>
-                              </Select>
-                              <FormMessage />
-                          </FormItem>
-                      )} />
-                  )}
+                    {deliveryTimeType === 'timeslot' && (
+                        <FormField control={form.control} name="deliveryTimeSlot" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Franja Horaria</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Selecciona una franja horaria" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="morning">Mañana (9am - 12pm)</SelectItem>
+                                        <SelectItem value="afternoon">Tarde (12pm - 5pm)</SelectItem>
+                                        <SelectItem value="evening">Noche (5pm - 9pm)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    )}
 
-                  {deliveryTimeType === 'exact_time' && (
-                      <FormField control={form.control} name="deliveryTime" render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                              <FormLabel>Fecha y Hora Exactas</FormLabel>
-                              <Popover>
-                                  <PopoverTrigger asChild>
-                                      <FormControl>
-                                          <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                              {field.value ? format(field.value, "PPP") : <span>Elige una fecha</span>}
-                                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                          </Button>
-                                      </FormControl>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0" align="start">
-                                      <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} disabled={(date) => date < new Date("1900-01-01")} initialFocus />
-                                  </PopoverContent>
-                              </Popover>
-                              <FormMessage />
-                          </FormItem>
-                      )} />
+                    {deliveryTimeType === 'exact_time' && (
+                        <FormField control={form.control} name="deliveryTime" render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel>Fecha y Hora Exactas</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                {field.value ? format(field.value, "PPP") : <span>Elige una fecha</span>}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} disabled={(date) => date < new Date("1900-01-01")} initialFocus />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    )}
+                    </>
                   )}
                   </div>
                 </ScrollArea>

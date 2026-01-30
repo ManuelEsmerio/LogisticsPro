@@ -5,9 +5,11 @@ export const orderSchema = z.object({
   orderNumber: z.string().min(1, "El número de pedido es obligatorio"),
   address: z.string().min(1, "La dirección es obligatoria"),
   recipientName: z.string().min(1, "El nombre del destinatario es obligatorio"),
+  product: z.string().optional(),
   contactNumber: z.string().min(1, "El número de contacto es obligatorio"),
   deliveryType: z.enum(["delivery", "pickup"]),
-  paymentStatus: z.enum(["paid", "due"]),
+  paymentStatus: z.enum(["paid", "due", "assigned"]),
+  priority: z.enum(["Alta", "Media", "Baja"]),
   deliveryTimeType: z.enum(["timeslot", "exact_time"]),
   deliveryTimeSlot: z.enum(["morning", "afternoon", "evening"]).nullable(),
   deliveryTime: z.date().nullable(),
@@ -37,14 +39,16 @@ export type Order = {
   orderNumber: string;
   address: string;
   recipientName: string;
+  product: string;
   contactNumber: string;
   deliveryType: "delivery" | "pickup";
-  paymentStatus: "paid" | "due";
+  paymentStatus: "paid" | "due" | "assigned";
   deliveryTimeSlot: 'morning' | 'afternoon' | 'evening' | null;
   deliveryTime: Date | null;
   latitude: number;
   longitude: number;
   createdAt: Date;
+  priority: 'Alta' | 'Media' | 'Baja';
 };
 
 export type Waypoint = Pick<Order, 'orderNumber' | 'address' | 'latitude' | 'longitude'>;

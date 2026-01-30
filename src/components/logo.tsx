@@ -1,15 +1,18 @@
 import Link from "next/link";
-import { BotMessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Logo() {
   return (
     <Link
       href="/dashboard"
-      className="flex items-center gap-2 font-semibold"
+      className="flex items-center gap-3"
     >
-      <BotMessageSquare className="h-6 w-6 text-primary" />
-      <span className={cn("font-headline text-xl group-data-[collapsible=icon]:hidden group-data-[collapsible=offcanvas]:hidden")}>OrderWise</span>
+      <div className="size-10 bg-slate-700 rounded flex items-center justify-center text-white">
+        <span className="material-symbols-outlined">local_shipping</span>
+      </div>
+      <h1 className="text-xl font-bold tracking-tight text-white">
+        Logistics <span className="text-slate-400 font-light">Pro</span>
+      </h1>
     </Link>
   );
 }

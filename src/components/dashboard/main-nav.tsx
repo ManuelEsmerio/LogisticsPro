@@ -2,33 +2,37 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Package, Truck, Users } from "lucide-react";
-import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/dashboard", icon: Package, label: "Pedidos" },
-  { href: "/dashboard/routes", icon: Truck, label: "Rutas" },
-  { href: "/dashboard/staff", icon: Users, label: "Personal" },
+  { href: "/dashboard", label: "Pedidos" },
+  { href: "/dashboard/routes", label: "Rutas" },
+  { href: "/dashboard/staff", label: "Personal" },
 ];
 
 export function MainNav() {
   const pathname = usePathname();
 
   return (
-    <SidebarMenu>
-      {navItems.map(({ href, icon: Icon, label }) => (
-        <SidebarMenuItem key={label}>
-          <Link href={href}>
-            <SidebarMenuButton
-              isActive={pathname === href}
-              tooltip={label}
-            >
-              <Icon />
-              <span>{label}</span>
-            </SidebarMenuButton>
+    <nav className="hidden md:flex items-center gap-6">
+      {navItems.map(({ href, label }) => {
+        const isActive = pathname === href;
+        return (
+          <Link
+            key={label}
+            href={href}
+            className={cn(
+              "transition-colors text-sm font-medium pb-1",
+              isActive 
+                ? "text-white font-semibold border-b-2 border-white" 
+                : "text-slate-300 hover:text-white"
+            )}
+          >
+            {label}
           </Link>
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
+        );
+      })}
+       <a className="text-slate-500 text-sm font-medium cursor-not-allowed">Inventario</a>
+    </nav>
   );
 }

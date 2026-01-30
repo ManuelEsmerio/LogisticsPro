@@ -1,7 +1,7 @@
 "use client"
 
-import { MoreHorizontal } from "lucide-react"
 import { Row } from "@tanstack/react-table"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { OrderFormDialog } from "../order-form-dialog"
 import { Order } from "@/lib/definitions"
-import { useState } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,26 +48,29 @@ export function DataTableRowActions<TData extends Order>({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="flex h-8 w-8 p-0 data-[state=open]:bg-muted"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-            <span className="sr-only">Abrir menú</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[160px]">
-          <OrderFormDialog order={row.original} isEditMode>
-             <span className="w-full text-left">Editar</span>
-          </OrderFormDialog>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive">
-            Eliminar
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="text-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-md text-slate-500 w-auto h-auto"
+            >
+              <span className="material-symbols-outlined text-lg">more_vert</span>
+              <span className="sr-only">Abrir menú</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <OrderFormDialog order={row.original} isEditMode>
+              <span className="w-full text-left">Editar</span>
+            </OrderFormDialog>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive">
+              Eliminar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>

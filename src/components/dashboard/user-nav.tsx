@@ -1,11 +1,9 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -21,14 +19,14 @@ export function UserNav() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <Avatar className="h-9 w-9">
-            {avatarImage && (
-                <AvatarImage src={avatarImage.imageUrl} alt="User avatar" data-ai-hint={avatarImage.imageHint} />
-            )}
-            <AvatarFallback>AD</AvatarFallback>
-          </Avatar>
-        </Button>
+        <div className="cursor-pointer size-10 rounded-full border-2 border-slate-400 overflow-hidden bg-slate-200">
+            <Avatar className="h-full w-full">
+                {avatarImage && (
+                    <AvatarImage src={avatarImage.imageUrl} alt="User avatar" data-ai-hint={avatarImage.imageHint} />
+                )}
+                <AvatarFallback>AD</AvatarFallback>
+            </Avatar>
+        </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
@@ -40,10 +38,8 @@ export function UserNav() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem>Perfil</DropdownMenuItem>
-          <DropdownMenuItem>Configuración</DropdownMenuItem>
-        </DropdownMenuGroup>
+        <DropdownMenuItem>Perfil</DropdownMenuItem>
+        <DropdownMenuItem>Configuración</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => router.push('/login')}>
           Cerrar sesión
