@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { getClusteredRoutesAction } from '@/lib/actions';
 import type { ClusteredRoute, StaffMember } from '@/lib/definitions';
-import { Loader2, X, UserCheck } from 'lucide-react';
+import { Loader2, X, UserCheck, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -102,11 +102,11 @@ export default function RoutesPage() {
         return (
              <div className="flex flex-col gap-4 h-full">
                 <h1 className="font-headline text-lg font-semibold md:text-2xl">
-                    Agrupación y Asignación de Rutas con IA
+                    Optimización y Asignación de Rutas
                 </h1>
                 <div className="flex flex-1 flex-col gap-4 rounded-lg border p-4 shadow-sm">
                     <p className="text-muted-foreground">
-                        Selecciona un horario para agrupar los pedidos y asignarlos a los transportistas.
+                        Selecciona un horario para optimizar las rutas de entrega y asignarlas a los transportistas.
                     </p>
                     <Skeleton className="h-10 w-full sm:w-[280px]" />
                     <Skeleton className="relative w-full h-96 rounded-lg" />
@@ -118,11 +118,11 @@ export default function RoutesPage() {
     return (
         <div className="flex flex-col gap-4 h-full">
             <h1 className="font-headline text-lg font-semibold md:text-2xl">
-                Agrupación y Asignación de Rutas con IA
+                Optimización y Asignación de Rutas
             </h1>
             <div className="flex flex-1 flex-col gap-4 rounded-lg border p-4 shadow-sm">
                 <p className="text-muted-foreground">
-                    Selecciona un horario para agrupar los pedidos y asignarlos a los transportistas.
+                    Selecciona un horario para optimizar las rutas de entrega y asignarlas a los transportistas.
                 </p>
                 <Select onValueChange={handleTimeSlotChange} disabled={isPending}>
                     <SelectTrigger className="w-full sm:w-[280px]">
@@ -147,7 +147,7 @@ export default function RoutesPage() {
                     )}
                      {!isPending && !timeSlot && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <p className="text-muted-foreground">Por favor, selecciona un horario para ver los grupos de rutas.</p>
+                            <p className="text-muted-foreground">Por favor, selecciona un horario para ver las rutas optimizadas.</p>
                         </div>
                     )}
                     {clusters.map((cluster, clusterIndex) => (
@@ -156,11 +156,12 @@ export default function RoutesPage() {
                             return (
                                 <div
                                     key={`${clusterIndex}-${orderIndex}`}
-                                    className="absolute -translate-x-1/2 -translate-y-1/2"
+                                    className="absolute -translate-x-1/2 -translate-y-1/2 group"
                                     style={{ top, left }}
                                 >
-                                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: clusterColors[clusterIndex % clusterColors.length] }} />
-                                     <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 text-xs whitespace-nowrap bg-background/80 px-1 rounded-sm">{order.orderNumber}</div>
+                                    <MapPin className="h-6 w-6" style={{ color: clusterColors[clusterIndex % clusterColors.length] }} />
+                                    <span className="absolute -top-5 -translate-x-1/2 left-1/2 text-xs font-bold text-white bg-black/70 rounded-full h-4 w-4 flex items-center justify-center">{orderIndex + 1}</span>
+                                     <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 text-xs whitespace-nowrap bg-background/80 px-1 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity">{order.orderNumber}</div>
                                 </div>
                             )
                         })
@@ -172,7 +173,7 @@ export default function RoutesPage() {
                              <div className="flex justify-between items-center flex-wrap gap-4">
                                 <h3 className="font-semibold flex items-center text-lg">
                                     <span className="h-4 w-4 rounded-full mr-3" style={{ backgroundColor: clusterColors[index % clusterColors.length] }} />
-                                    Grupo {index + 1}
+                                    Ruta {index + 1}
                                 </h3>
                                 {assignedDrivers[index] ? (
                                      <div className="flex items-center gap-2 text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full dark:bg-green-900/50 dark:text-green-400">
@@ -195,7 +196,10 @@ export default function RoutesPage() {
                             <ul className="text-sm text-muted-foreground grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
                                 {cluster.orders.map((o, orderIndex) => (
                                     <li key={o.orderNumber} className="flex items-center justify-between">
-                                        <span>{o.orderNumber}: {o.address}</span>
+                                        <div className="flex items-center">
+                                            <span className="font-bold text-foreground w-6 mr-2">{orderIndex + 1}.</span>
+                                            <span>{o.orderNumber}: {o.address}</span>
+                                        </div>
                                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveOrder(index, orderIndex)}>
                                             <X className="h-4 w-4" />
                                         </Button>

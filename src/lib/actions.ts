@@ -4,14 +4,12 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addOrder, deleteOrder, getOrders, updateOrder, addStaff, updateStaff, deleteStaff, getStaff } from "@/lib/data";
-import { orderSchema, staffMemberSchema, type Order, type OrderFormValues, type StaffMemberFormValues } from "@/lib/definitions";
-import { clusterRoutes } from "@/ai/flows/cluster-routes";
+import { orderSchema, staffMemberSchema, type Order, type OrderFormValues, type StaffMemberFormValues, Waypoint } from "@/lib/definitions";
+import { DBSCAN } from 'density-clustering';
 
 // --- Real Geocoding with Google Maps API ---
 async function geocodeAddress(address: string): Promise<{ latitude: number; longitude: number }> {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-
-    // Default coordinates for Tequila, Jalisco, if API key is missing or fails.
     const fallbackCoordinates = { latitude: 20.8833, longitude: -103.8360 };
 
     if (!apiKey) {
@@ -41,6 +39,57 @@ async function geocodeAddress(address: string): Promise<{ latitude: number; long
     }
 }
 
+async function optimizeRoute(waypoints: Waypoint[]) {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!apiKey || waypoints.length === 0) {
+        return { orderedWaypoints: waypoints };
+    }
+
+    const API_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+
+    const origin = waypoints[0];
+    const intermediates = waypoints.slice(1);
+
+    const requestBody = {
+        origin: { location: { latLng: { latitude: origin.latitude, longitude: origin.longitude } } },
+        destination: { location: { latLng: { latitude: origin.latitude, longitude: origin.longitude } } },
+        intermediates: intermediates.map(wp => ({
+            location: { latLng: { latitude: wp.latitude, longitude: wp.longitude } }
+        })),
+        travelMode: 'DRIVE',
+        routingPreference: 'TRAFFIC_AWARE',
+        optimizeWaypointOrder: true,
+    };
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': apiKey,
+                'X-Goog-FieldMask': 'routes.optimizedIntermediateWaypointIndex'
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        const data = await response.json();
+
+        if (data.routes && data.routes[0] && data.routes[0].optimizedIntermediateWaypointIndex) {
+            const optimizedIndices = data.routes[0].optimizedIntermediateWaypointIndex;
+            const orderedWaypoints = [origin];
+            optimizedIndices.forEach((index: number) => {
+                orderedWaypoints.push(intermediates[index]);
+            });
+            return { orderedWaypoints };
+        }
+        // If optimization fails, return original order
+        return { orderedWaypoints: waypoints };
+    } catch (error) {
+        console.error('Error calling Routes API:', error);
+        return { orderedWaypoints: waypoints }; // Fallback
+    }
+}
+
 
 export async function saveOrder(data: OrderFormValues) {
   const validatedFields = orderSchema.safeParse(data);
@@ -54,7 +103,6 @@ export async function saveOrder(data: OrderFormValues) {
   
   const { id, deliveryTimeType, ...orderData } = validatedFields.data;
 
-  // Use real geocoding
   const { latitude, longitude } = await geocodeAddress(orderData.address);
 
   try {
@@ -87,21 +135,41 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
     try {
         const allOrders = await getOrders();
         const deliveryOrders = allOrders
-            .filter(order => order.deliveryType === 'delivery' && order.deliveryTimeSlot === timeSlot && order.paymentStatus === 'due')
-            .map(order => ({
-                orderNumber: order.orderNumber,
-                address: order.address,
-                latitude: order.latitude,
-                longitude: order.longitude,
-                deliveryTimeSlot: order.deliveryTimeSlot!,
-            }));
+            .filter(order => order.deliveryType === 'delivery' && order.deliveryTimeSlot === timeSlot && order.paymentStatus === 'due');
         
         if (deliveryOrders.length === 0) {
             return { clusteredRoutes: [], staff: await getStaff() };
         }
 
-        const result = await clusterRoutes({ orders: deliveryOrders });
-        return { clusteredRoutes: result.clusteredRoutes, staff: await getStaff() };
+        const dataset = deliveryOrders.map(order => [order.latitude, order.longitude]);
+        
+        // Epsilon: max distance in degrees (approx 1km). minPoints: min orders to form a cluster.
+        const scanner = new DBSCAN();
+        const clustersIndices = scanner.run(dataset, 0.01, 2);
+
+
+        const clusteredRoutesPromises = clustersIndices.map(async (clusterOrderIndices: number[]) => {
+            const waypoints: Waypoint[] = clusterOrderIndices.map(i => {
+                const order = deliveryOrders[i];
+                return {
+                    orderNumber: order.orderNumber,
+                    address: order.address,
+                    latitude: order.latitude,
+                    longitude: order.longitude,
+                };
+            });
+
+            const { orderedWaypoints } = await optimizeRoute(waypoints);
+
+            return {
+                timeSlot,
+                orders: orderedWaypoints,
+            };
+        });
+
+        const clusteredRoutes = await Promise.all(clusteredRoutesPromises);
+
+        return { clusteredRoutes, staff: await getStaff() };
 
     } catch (error) {
         console.error(error);

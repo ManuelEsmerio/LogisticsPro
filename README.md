@@ -1,70 +1,145 @@
-# OrderWise
+# OrderWise: Gestión de Pedidos y Optimización de Rutas
 
-OrderWise is a Next.js web application designed for efficient order and delivery management. It provides a comprehensive solution for handling orders, from creation to route optimization, with a clean and intuitive user interface.
+OrderWise es una aplicación web construida con Next.js, diseñada para la gestión eficiente de pedidos y la optimización inteligente de rutas de entrega. Proporciona una solución completa desde la creación del pedido hasta la asignación de rutas logísticas, todo dentro de una interfaz de usuario limpia e intuitiva.
 
-This project is scaffolded in Firebase Studio.
-
-## Features
-
-- **Simple Authentication**: Secure login with email and password.
-- **Order Dashboard**: An interactive table to view, create, edit, and delete orders.
-- **Order Management**: Detailed order forms with fields for address, recipient, contact info, delivery type, payment status, and delivery time.
-- **Geocoding**: Automatic conversion of addresses to latitude and longitude coordinates via Google Maps API.
-- **AI-Powered Route Clustering**: Intelligent grouping of delivery orders based on geographic proximity and time slots to optimize delivery routes.
-- **Clean UI/UX**: A modern interface built with TailwindCSS and shadcn/ui, featuring a professional color palette and typography.
+## Tabla de Contenidos
+- [Características Principales](#características-principales)
+- [Arquitectura Técnica](#arquitectura-técnica)
+- [Estructura de Archivos Clave](#estructura-de-archivos-clave)
+- [Guía de Configuración y Ejecución](#guía-de-configuración-y-ejecución)
+- [Credenciales de Acceso](#credenciales-de-acceso)
+- [Explicación de la Lógica Central](#explicación-de-la-lógica-central)
+  - [Geocodificación de Direcciones](#1-geocodificación-de-direcciones-dirección---coordenadas)
+  - [Optimización de Rutas en Dos Pasos](#2-optimización-de-rutas-en-dos-pasos)
 
 ---
 
-## Technical Explanations
+## Características Principales
 
-### Geocoding Logic
+-   **Autenticación Simple**: Inicio de sesión seguro (simulado) con correo y contraseña.
+-   **Dashboard de Pedidos**: Una tabla interactiva para visualizar, crear, editar y eliminar pedidos.
+-   **Gestión de Personal**: Funcionalidad para añadir, editar y eliminar miembros del personal.
+-   **Optimización de Rutas**: Una vista dedicada para agrupar pedidos por horarios y optimizar las rutas de entrega.
+-   **Asignación de Conductores**: Permite asignar las rutas optimizadas a los miembros del personal disponibles.
+-   **Interfaz Moderna**: Construida con Next.js App Router, TailwindCSS и shadcn/ui.
 
-Geocoding is the process of converting a physical address into geographic coordinates (latitude and longitude). This is crucial for mapping and route optimization.
+---
 
-**Implementation (`src/lib/actions.ts`):**
+## Arquitectura Técnica
 
-This application uses the **Google Maps Geocoding API** to perform address-to-coordinate conversion.
+-   **Frontend**: Next.js 15 (App Router), React 19, TypeScript.
+-   **Estilos**: TailwindCSS y componentes `shadcn/ui` para una interfaz moderna y personalizable.
+-   **Backend**: Next.js Server Actions para manejar toda la lógica del lado del servidor (mutaciones de datos y llamadas a APIs externas).
+-   **Datos**: La aplicación utiliza un almacén de datos **en memoria** (`src/lib/data.ts`) para simular una base de datos. Los datos se reinician cada vez que el servidor se recarga.
+-   **Servicios Externos**:
+    -   **Google Geocoding API**: Para convertir direcciones físicas en coordenadas de latitud y longitud.
+    -   **Google Routes API**: Para calcular el orden óptimo de visita dentro de un grupo de pedidos.
+-   **Algoritmo de Clustering**: La agrupación de pedidos se realiza internamente utilizando el algoritmo **DBSCAN**.
 
-**Setup:**
-1.  Enable the "Geocoding API" in your Google Cloud Platform project.
-2.  Create an API key and restrict it to the Geocoding API.
-3.  Add your API key to the `.env` file in the root of the project:
-    ```
-    GOOGLE_MAPS_API_KEY="YOUR_API_KEY_HERE"
-    ```
+---
 
-**Flow:**
-1. When a user creates or updates an order, the `saveOrder` server action calls the `geocodeAddress` function with the provided address.
-2. An API call is made to the Google Maps Geocoding API.
-3. The service returns the latitude and longitude for that address.
-4. These coordinates are then saved to the database along with the rest of the order details.
+## Estructura de Archivos Clave
 
-If the API key is missing or the request fails, the application will fall back to default coordinates to prevent crashes.
+-   `src/app/dashboard/`: Contiene las páginas principales de la aplicación (pedidos, rutas, personal).
+    -   `page.tsx`: Dashboard principal de pedidos.
+    -   `routes/page.tsx`: Página para la optimización y asignación de rutas.
+    -   `staff/page.tsx`: Página para la gestión de personal.
+-   `src/components/`: Componentes reutilizables de React.
+    -   `dashboard/`: Componentes específicos del panel de control (tablas de datos, formularios, etc.).
+    -   `ui/`: Componentes base de la interfaz de usuario de `shadcn/ui`.
+-   `src/lib/actions.ts`: **(¡Archivo muy importante!)** Contiene las Server Actions que ejecutan la lógica del backend. Aquí se procesan los formularios, se llama a las APIs de Google y se realiza el clustering.
+-   `src/lib/data.ts`: Define y exporta los datos de prueba (mock data) que la aplicación utiliza. Actúa como una base de datos simulada en memoria.
+-   `src/lib/definitions.ts`: Contiene las definiciones de tipos de TypeScript y los esquemas de validación de Zod para los formularios.
+-   `.env`: Archivo para almacenar variables de entorno, como la clave de la API de Google Maps.
 
-```typescript
-// src/lib/actions.ts
-const { latitude, longitude } = await geocodeAddress(orderData.address);
+---
+
+## Guía de Configuración y Ejecución
+
+### 1. Requisitos Previos
+
+-   Node.js (v18 o superior)
+-   npm o un gestor de paquetes similar
+
+### 2. Instalación
+
+Clona el repositorio e instala las dependencias:
+
+```bash
+git clone <url-del-repositorio>
+cd <nombre-del-repositorio>
+npm install
 ```
 
-### Route Clustering Logic
+### 3. Configuración de la API de Google Maps
 
-Route clustering involves grouping multiple delivery stops into optimized routes to save time and fuel. This application leverages a Genkit AI flow to perform this task.
+La optimización de rutas requiere una clave de API de Google Maps Platform.
 
-**Implementation (`src/lib/actions.ts` and `src/ai/flows/cluster-routes.ts`):**
+1.  **Obtén una Clave de API**:
+    -   Ve a la [Consola de Google Cloud](https://console.cloud.google.com/).
+    -   Crea un nuevo proyecto y habilita una cuenta de facturación (Google ofrece un generoso nivel gratuito).
+    -   Habilita las siguientes APIs: **Geocoding API** y **Routes API**.
+    -   Ve a "Credenciales", crea una "Clave de API" y cópiala.
+    -   **Importante**: Restringe tu clave para que solo pueda usarse con las APIs que habilitaste.
 
-1.  **User Trigger**: The user initiates the process from the dashboard by selecting a time slot (e.g., morning, afternoon, evening).
+2.  **Agrega la Clave al Proyecto**:
+    -   En la raíz del proyecto, encontrarás un archivo llamado `.env`.
+    -   Abre el archivo y pega tu clave de API dentro de las comillas:
 
-2.  **Server Action (`getClusteredRoutesAction`)**:
-    -   This action gathers all orders scheduled for delivery within the selected time slot.
-    -   It formats this data into the required input structure for the AI flow, including order numbers, addresses, and coordinates.
+    ```env
+    GOOGLE_MAPS_API_KEY="AQUI_VA_TU_CLAVE_DE_API"
+    ```
 
-3.  **Genkit AI Flow (`clusterRoutes`)**:
-    -   The server action calls the pre-defined Genkit flow `clusterRoutes`.
-    -   This AI flow receives the list of orders and uses a powerful language model with a specialized prompt. The prompt instructs the AI to act as a "route optimization expert" and group the orders based on geographic proximity.
-    -   The AI analyzes the coordinates and time constraints to create logical clusters.
+### 4. Ejecutar la Aplicación
 
-4.  **Output**:
-    -   The AI flow returns a structured JSON object containing the clustered routes. Each cluster includes the time slot and the list of orders belonging to it.
-    -   The frontend then visualizes these clusters on a map-like interface, providing drivers with a clear, optimized plan for their deliveries.
+Inicia el servidor de desarrollo:
 
-This AI-driven approach automates a complex logistical task, making the delivery process significantly more efficient.
+```bash
+npm run dev
+```
+
+La aplicación estará disponible en `http://localhost:9002`.
+
+---
+
+## Credenciales de Acceso
+
+La aplicación utiliza un sistema de inicio de sesión simulado. Usa las siguientes credenciales:
+
+-   **Usuario:** `admin@orderwise.com`
+-   **Contraseña:** `password`
+
+---
+
+## Explicación de la Lógica Central
+
+El núcleo de la funcionalidad de optimización se encuentra en el archivo `src/lib/actions.ts`, específicamente en las funciones `saveOrder` y `getClusteredRoutesAction`.
+
+### 1. Geocodificación de Direcciones (Dirección -> Coordenadas)
+
+-   **Cuándo ocurre**: Cuando se crea o edita un pedido a través del formulario.
+-   **Función**: `saveOrder` -> `geocodeAddress`
+-   **Proceso**:
+    1.  La acción `saveOrder` recibe los datos del formulario.
+    2.  Llama a la función `geocodeAddress`, pasándole la dirección del pedido.
+    3.  `geocodeAddress` hace una petición `fetch` a la **Google Geocoding API**.
+    4.  La API devuelve la latitud y longitud, que se guardan en la base de datos (en nuestro caso, en el array de `orders` en memoria) junto con el resto de la información del pedido.
+    5.  Este paso es crucial y se hace solo una vez por pedido para minimizar costos.
+
+### 2. Optimización de Rutas en Dos Pasos
+
+Este proceso se activa en la página `/dashboard/routes` al seleccionar un horario.
+
+-   **Función**: `getClusteredRoutesAction`
+-   **Proceso**:
+    1.  **Filtrado de Pedidos**: Se obtienen todos los pedidos de la base de datos que son del tipo "entrega", están "pendientes de pago" y coinciden con el horario seleccionado (mañana, tarde, noche).
+    2.  **Paso 1: Clustering con DBSCAN**:
+        -   Se extraen las coordenadas de los pedidos filtrados.
+        -   Se utiliza el algoritmo **DBSCAN** para agrupar las coordenadas que están geográficamente cerca. Esto crea "clústeres" o zonas de entrega. DBSCAN es ideal porque no necesita saber cuántas rutas habrá de antemano.
+    3.  **Paso 2: Optimización de cada Clúster**:
+        -   Para cada clúster (grupo de pedidos) creado, se llama a la función `optimizeRoute`.
+        -   `optimizeRoute` envía los puntos de ese clúster a la **Google Routes API**, con el parámetro `optimizeWaypointOrder=true`.
+        -   La API resuelve el "Problema del Vendedor Viajero" para ese pequeño grupo y devuelve el orden de visita más eficiente.
+    4.  **Resultado Final**: La acción devuelve al frontend una lista de rutas, cada una con una lista de pedidos ya ordenados de manera óptima para la entrega.
+
+Este enfoque de dos pasos (agrupar primero, luego optimizar cada grupo) es mucho más eficiente y escalable que intentar optimizar todos los pedidos a la vez.

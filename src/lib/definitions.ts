@@ -47,9 +47,11 @@ export type Order = {
   createdAt: Date;
 };
 
+export type Waypoint = Pick<Order, 'orderNumber' | 'address' | 'latitude' | 'longitude'>;
+
 export type ClusteredRoute = {
   timeSlot: 'morning' | 'afternoon' | 'evening';
-  orders: Pick<Order, 'orderNumber' | 'address' | 'latitude' | 'longitude'>[];
+  orders: Waypoint[];
 };
 
 export const staffMemberSchema = z.object({
