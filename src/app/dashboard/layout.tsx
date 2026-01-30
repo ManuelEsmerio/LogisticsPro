@@ -1,4 +1,5 @@
 'use client';
+import { usePathname } from 'next/navigation';
 import { MainNav } from "@/components/dashboard/main-nav";
 import Logo from "@/components/logo";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,9 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const isRoutesPage = pathname === '/dashboard/routes';
+
   return (
       <div className="min-h-screen w-full flex flex-col bg-silk-gray dark:bg-background-dark">
         <header className="sticky top-0 z-50 bg-[#1E293B] border-b border-white/10 px-6 py-3 text-white">
@@ -42,14 +46,16 @@ export default function DashboardLayout({
         <main className="max-w-[1400px] mx-auto w-full p-6 space-y-6">
             {children}
         </main>
-        <Link href="/dashboard/routes">
-          <Button
-            className="fixed bottom-8 right-8 w-14 h-14 rounded-md shadow-xl flex items-center justify-center hover:-translate-y-1 transition-all z-50 bg-[#1E293B] text-white hover:bg-slate-800"
-            aria-label="Ver rutas"
-          >
-            <span className="material-symbols-outlined text-2xl">map</span>
-          </Button>
-        </Link>
+        {!isRoutesPage && (
+          <Link href="/dashboard/routes">
+            <Button
+              className="fixed bottom-8 right-8 w-14 h-14 rounded-md shadow-xl flex items-center justify-center hover:-translate-y-1 transition-all z-50 bg-[#1E293B] text-white hover:bg-slate-800"
+              aria-label="Ver rutas"
+            >
+              <span className="material-symbols-outlined text-2xl">map</span>
+            </Button>
+          </Link>
+        )}
       </div>
   );
 }

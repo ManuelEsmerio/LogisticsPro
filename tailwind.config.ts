@@ -10,6 +10,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
+        sans: ['Outfit', 'sans-serif'],
         display: ['Outfit', 'sans-serif'],
         body: ['Outfit', 'sans-serif'],
         headline: ['Outfit', 'sans-serif'],
@@ -49,13 +50,11 @@ export default {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
-        chart: {
-          '1': 'hsl(var(--chart-1))',
-          '2': 'hsl(var(--chart-2))',
-          '3': 'hsl(var(--chart-3))',
-          '4': 'hsl(var(--chart-4))',
-          '5': 'hsl(var(--chart-5))',
-        },
+        'navy-dark': '#0F172A',
+        'silk-gray': '#F8F9FA',
+        'zone-north': '#0EA5E9',
+        'zone-south': '#F59E0B',
+        'zone-center': '#0D9488',
         forest: "#166534",
       },
       borderRadius: {

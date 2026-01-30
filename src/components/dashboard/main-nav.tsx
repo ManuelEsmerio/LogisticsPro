@@ -22,10 +22,10 @@ export function MainNav() {
             key={label}
             href={href}
             className={cn(
-              "transition-colors text-sm font-medium pb-1 text-white",
+              "transition-colors text-sm font-medium pb-1",
               isActive
-                ? "font-semibold border-b-2 border-white"
-                : "opacity-70 hover:opacity-100"
+                ? "font-semibold border-b-2 border-white text-white"
+                : "text-white opacity-70 hover:opacity-100"
             )}
           >
             {label}
