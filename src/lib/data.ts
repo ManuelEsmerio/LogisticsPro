@@ -1,6 +1,6 @@
 import type { Order, StaffMember } from './definitions';
 
-const API_URL = 'http://127.0.0.1:3001';
+const API_URL = 'http://localhost:3001';
 
 // --- ORDERS ---
 
