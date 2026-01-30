@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { DndContext, useDraggable, useDroppable, DragOverlay, closestCenter, UniqueIdentifier } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
 
 
 function formatDuration(duration: string): string {
@@ -217,13 +216,13 @@ export default function RoutesPage() {
     }, [clusters, assignedRoutes]);
     
     return (
-       <div className="h-full flex flex-col overflow-hidden">
-            <DndContext 
-                onDragStart={(event) => setActiveId(event.active.id)}
-                onDragEnd={handleDragEnd}
-                onDragCancel={() => setActiveId(null)}
-                collisionDetection={closestCenter}
-            >
+        <DndContext 
+            onDragStart={(event) => setActiveId(event.active.id)}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveId(null)}
+            collisionDetection={closestCenter}
+        >
+            <div className="h-full flex flex-col overflow-hidden">
                 <div className="px-8 py-6 flex flex-col gap-4 bg-white border-b border-slate-200 shrink-0">
                     <div className="flex justify-between items-end">
                         <div>
@@ -287,41 +286,41 @@ export default function RoutesPage() {
                         )}
                     </section>
                 </div>
+                <footer className="h-20 bg-white border-t border-slate-200 flex items-center justify-between px-8 shrink-0 z-40">
+                    <div className="flex items-center gap-10">
+                        <div className="flex items-center gap-3">
+                            <div className="h-3 w-3 bg-accent rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Eficiencia Operativa</p>
+                                <p className="text-sm font-bold text-primary">82.4% <span className="text-accent text-[10px] font-bold ml-1">↑ +2.1%</span></p>
+                            </div>
+                        </div>
+                        <div className="h-8 w-px bg-slate-200"></div>
+                        <div className="flex gap-8">
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bloques Pendientes</p>
+                                <p className="text-sm font-bold text-primary">{unassignedClusters.length}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Activos</p>
+                                <p className="text-sm font-bold text-primary">{staff.length} Choferes</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Button variant="outline" className="px-6 py-2.5 rounded-xl border-slate-200 text-sm font-bold text-primary hover:bg-slate-50 transition-all">
+                            Re-calcular Rutas
+                        </Button>
+                        <Button className="px-8 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-slate-800 transition-all flex items-center gap-2">
+                            <span className="material-symbols-outlined text-xl">local_shipping</span>
+                            Confirmar y Despachar
+                        </Button>
+                    </div>
+                </footer>
                  <DragOverlay>
                     {activeCluster ? <UnassignedRouteCard route={activeCluster} clusterIndex={Number(activeId)} isOverlay /> : null}
                 </DragOverlay>
-            </DndContext>
-            <footer className="h-20 bg-white border-t border-slate-200 flex items-center justify-between px-8 shrink-0 z-40">
-                <div className="flex items-center gap-10">
-                    <div className="flex items-center gap-3">
-                        <div className="h-3 w-3 bg-accent rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                        <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Eficiencia Operativa</p>
-                            <p className="text-sm font-bold text-primary">82.4% <span className="text-accent text-[10px] font-bold ml-1">↑ +2.1%</span></p>
-                        </div>
-                    </div>
-                    <div className="h-8 w-px bg-slate-200"></div>
-                    <div className="flex gap-8">
-                        <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bloques Pendientes</p>
-                            <p className="text-sm font-bold text-primary">{unassignedClusters.length}</p>
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Activos</p>
-                            <p className="text-sm font-bold text-primary">{staff.length} Choferes</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <Button variant="outline" className="px-6 py-2.5 rounded-xl border-slate-200 text-sm font-bold text-primary hover:bg-slate-50 transition-all">
-                        Re-calcular Rutas
-                    </Button>
-                    <Button className="px-8 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-slate-800 transition-all flex items-center gap-2">
-                        <span className="material-symbols-outlined text-xl">local_shipping</span>
-                        Confirmar y Despachar
-                    </Button>
-                </div>
-            </footer>
-       </div>
+            </div>
+       </DndContext>
     );
 }
