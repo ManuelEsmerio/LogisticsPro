@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -66,21 +66,18 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
     };
 
     const trigger = isEditMode ? (
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
             {children}
         </DropdownMenuItem>
     ) : (
-        <Button size="sm" className="h-8 gap-1">
-            <PlusCircle className="h-3.5 w-3.5" />
+        <DialogTrigger asChild>
             {children}
-        </Button>
+        </DialogTrigger>
     )
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
         {trigger}
-      </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="font-headline">{isEditMode ? "Editar Miembro del Personal" : "Crear Nuevo Miembro del Personal"}</DialogTitle>

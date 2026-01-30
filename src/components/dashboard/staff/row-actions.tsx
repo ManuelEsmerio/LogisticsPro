@@ -1,6 +1,5 @@
 "use client"
 
-import { MoreHorizontal } from "lucide-react"
 import { Row } from "@tanstack/react-table"
 import { useState } from "react"
 
@@ -49,26 +48,29 @@ export function StaffDataTableRowActions<TData extends StaffMember>({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="flex h-8 w-8 p-0 data-[state=open]:bg-muted"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-            <span className="sr-only">Abrir menú</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[160px]">
-          <StaffFormDialog staffMember={row.original} isEditMode>
-             <span className="w-full text-left">Editar</span>
-          </StaffFormDialog>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive">
-            Eliminar
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="text-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-md text-slate-500 w-auto h-auto"
+            >
+              <span className="material-symbols-outlined text-lg">more_vert</span>
+              <span className="sr-only">Abrir menú</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[160px]">
+            <StaffFormDialog staffMember={row.original} isEditMode>
+              <span className="w-full text-left">Editar</span>
+            </StaffFormDialog>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive">
+              Eliminar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>

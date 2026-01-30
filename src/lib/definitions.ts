@@ -68,5 +68,10 @@ export type StaffMemberFormValues = z.infer<typeof staffMemberSchema>;
 export type StaffMember = {
   id: string;
   name: string;
+  email: string;
+  role: 'Repartidor' | 'Administrador' | 'Florista Senior' | 'Gerente';
+  status: 'Activo' | 'Inactivo';
+  shift: string;
+  avatarUrl: string;
   createdAt: Date;
 };

@@ -10,7 +10,7 @@
 
 @layer base {
   :root {
-    --background: 214 32% 91%; /* #F1F5F9 */
+    --background: 210 17% 98%; /* #F8F9FA */
     --foreground: 222 31% 25%; /* a bit lighter than #1E293B for body text */
 
     --card: 0 0% 100%;

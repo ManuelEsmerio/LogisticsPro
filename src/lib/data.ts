@@ -1,15 +1,68 @@
 import type { Order, StaffMember } from './definitions';
+import { PlaceHolderImages } from './placeholder-images';
 
 // In-memory store for orders
 let orders: Order[] = [];
 
+const staffAvatar1 = PlaceHolderImages.find(p => p.id === 'staff-1')?.imageUrl ?? "https://picsum.photos/seed/1/100/100";
+const staffAvatar2 = PlaceHolderImages.find(p => p.id === 'staff-2')?.imageUrl ?? "https://picsum.photos/seed/2/100/100";
+const staffAvatar3 = PlaceHolderImages.find(p => p.id === 'staff-3')?.imageUrl ?? "https://picsum.photos/seed/3/100/100";
+const staffAvatar4 = PlaceHolderImages.find(p => p.id === 'staff-4')?.imageUrl ?? "https://picsum.photos/seed/4/100/100";
+const staffAvatar5 = PlaceHolderImages.find(p => p.id === 'staff-5')?.imageUrl ?? "https://picsum.photos/seed/5/100/100";
+
+
 // In-memory store for staff
 let staff: StaffMember[] = [
-    { id: '1', name: 'Juan Pérez', createdAt: new Date() },
-    { id: '2', name: 'Ana Gómez', createdAt: new Date() },
-    { id: '3', name: 'Carlos Rodríguez', createdAt: new Date() },
-    { id: '4', name: 'Laura Fernández', createdAt: new Date() },
-    { id: '5', name: 'Miguel González', createdAt: new Date() },
+    { 
+        id: '1', 
+        name: 'Juan Pérez', 
+        email: 'jperez@logistics.pro',
+        role: 'Repartidor',
+        status: 'Activo',
+        shift: 'Mañana (08:00 - 16:00)',
+        avatarUrl: staffAvatar1,
+        createdAt: new Date('2023-01-15') 
+    },
+    { 
+        id: '2', 
+        name: 'Ana Gómez', 
+        email: 'agomez@logistics.pro',
+        role: 'Administrador',
+        status: 'Activo',
+        shift: 'Intermedio (10:00 - 18:00)',
+        avatarUrl: staffAvatar2,
+        createdAt: new Date('2022-03-22') 
+    },
+    { 
+        id: '3', 
+        name: 'Carlos Rodríguez', 
+        email: 'crodriguez@logistics.pro',
+        role: 'Florista Senior',
+        status: 'Inactivo',
+        shift: 'Tarde (14:00 - 22:00)',
+        avatarUrl: staffAvatar3,
+        createdAt: new Date('2023-11-10') 
+    },
+    { 
+        id: '4', 
+        name: 'Laura Fernández', 
+        email: 'lfernandez@logistics.pro',
+        role: 'Repartidor',
+        status: 'Activo',
+        shift: 'Mañana (08:00 - 16:00)',
+        avatarUrl: staffAvatar4,
+        createdAt: new Date('2024-02-05') 
+    },
+    { 
+        id: '5', 
+        name: 'Miguel González', 
+        email: 'mgonzalez@logistics.pro',
+        role: 'Gerente',
+        status: 'Activo',
+        shift: 'Intermedio (09:00 - 17:00)',
+        avatarUrl: staffAvatar5,
+        createdAt: new Date('2021-08-01') 
+    },
 ];
 
 const mockOrders: Omit<Order, 'id' | 'createdAt'>[] = [
@@ -198,11 +251,16 @@ export async function getStaff(): Promise<StaffMember[]> {
     return staff.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
-export async function addStaff(staffData: Omit<StaffMember, 'id' | 'createdAt'>): Promise<StaffMember> {
+export async function addStaff(staffData: Omit<StaffMember, 'id' | 'createdAt' | 'email' | 'role' | 'status' | 'shift' | 'avatarUrl'>): Promise<StaffMember> {
     await sleep(300);
     const newStaffMember: StaffMember = {
         ...staffData,
         id: String(Date.now()),
+        email: `${staffData.name.split(' ')[0].toLowerCase()}@logistics.pro`,
+        role: 'Repartidor',
+        status: 'Activo',
+        shift: 'Mañana (08:00 - 16:00)',
+        avatarUrl: `https://picsum.photos/seed/${Date.now()}/100/100`,
         createdAt: new Date(),
     };
     staff.push(newStaffMember);

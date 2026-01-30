@@ -31,7 +31,7 @@ export default function DashboardLayout({
                         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">search</span>
                         <Input 
                             className="pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-700 border-none rounded-md text-sm focus:ring-2 focus:ring-slate-400 w-64 text-foreground"
-                            placeholder="Buscar pedido..."
+                            placeholder="Buscar..."
                         />
                     </div>
                     <ThemeToggle />
@@ -48,7 +48,7 @@ export default function DashboardLayout({
             className="fixed bottom-8 right-8 w-14 h-14 rounded-md shadow-xl flex items-center justify-center hover:-translate-y-1 transition-all z-50 bg-primary text-primary-foreground"
             aria-label="Ver rutas"
           >
-            <span className="material-symbols-outlined text-2xl">map</span>
+            <span className="material-symbols-outlined text-2xl">support_agent</span>
           </Button>
         </Link>
       </div>
