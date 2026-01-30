@@ -24,8 +24,8 @@ export default function DashboardLayout({
   const isRoutesPage = pathname === '/dashboard/routes';
 
   return (
-      <div className="min-h-screen w-full flex flex-col bg-silk-gray dark:bg-background-dark">
-        <header className="h-14 bg-navy-dark flex items-center justify-between px-6 shrink-0 z-50 text-white">
+      <div className="min-h-screen w-full flex flex-col bg-background dark:bg-navy-dark">
+        <header className="h-14 bg-navy-dark flex items-center justify-between px-6 shrink-0 z-50 border-b border-transparent dark:border-slate-800">
             <div className="flex items-center gap-12 h-full">
                 <Logo />
                 <MainNav />
@@ -34,7 +34,7 @@ export default function DashboardLayout({
                 <div className="relative hidden sm:block">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
                     <Input 
-                        className="bg-white/10 border-none rounded-lg py-1.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 w-64 focus:ring-1 focus:ring-white/20 transition-all"
+                        className="bg-white/10 dark:bg-slate-800/50 dark:border-slate-700 rounded-lg py-1.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 w-64 focus:ring-1 focus:ring-blue-500/50 transition-all"
                         placeholder="Buscar..."
                     />
                 </div>

@@ -70,6 +70,10 @@ export default {
         sm: "calc(1rem - 4px)",
         DEFAULT: "1rem",
       },
+      boxShadow: {
+        'neon-glow': '0 0 15px rgba(187, 247, 208, 0.3)',
+        'blue-glow': '0 0 20px rgba(59, 130, 246, 0.25)',
+      },
       keyframes: {
         'accordion-down': {
           from: {

@@ -19,7 +19,7 @@ export function UserNav() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <div className="cursor-pointer h-8 w-8 rounded-full border-2 border-white/20 overflow-hidden bg-slate-200">
+        <div className="cursor-pointer h-8 w-8 rounded-full border-2 border-white/20 dark:border-slate-700 overflow-hidden bg-slate-200 dark:bg-slate-700">
             <Avatar className="h-full w-full">
                 {avatarImage && (
                     <AvatarImage src={avatarImage.imageUrl} alt="User avatar" data-ai-hint={avatarImage.imageHint} />
