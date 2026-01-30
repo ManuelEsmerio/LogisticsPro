@@ -45,7 +45,7 @@ function UnassignedRouteCard({ route, clusterIndex, isOverlay = false }: { route
     const config = zoneConfig[route.timeSlot || 'morning'];
 
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn("route-card", config.color, isOverlay && "shadow-2xl ring-2 ring-primary")}>
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={cn("bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing border-l-4", config.color, isOverlay && "shadow-2xl ring-2 ring-primary")}>
             <div className="flex justify-between items-start mb-2">
                 <div>
                     <span className={cn("text-[10px] font-bold uppercase tracking-wider", config.text)}>{config.name}</span>
@@ -80,7 +80,7 @@ function DriverColumn({ driver, route, clusterIndex }: { driver: StaffMember, ro
     const capacity = 12; // Mock capacity
 
     return (
-        <div ref={setNodeRef} className={cn("driver-column", isOver && "bg-slate-100", route && "border-primary ring-2 ring-primary/5")}>
+        <div ref={setNodeRef} className={cn("bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-[320px]", isOver && "bg-slate-100", route && "border-primary ring-2 ring-primary/5")}>
             <div className="p-5 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
                 <div className="flex items-center gap-4 mb-4">
                     <div className="relative">
@@ -104,8 +104,9 @@ function DriverColumn({ driver, route, clusterIndex }: { driver: StaffMember, ro
                 </div>
             </div>
             
+            <div className="flex-1 flex flex-col min-h-0">
             {route ? (
-                <div className="flex-1 flex flex-col min-h-0">
+                <>
                     <div className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar bg-white">
                         <div className="flex items-center gap-2 mb-2">
                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Secuencia de Entrega</span>
@@ -127,13 +128,14 @@ function DriverColumn({ driver, route, clusterIndex }: { driver: StaffMember, ro
                              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">distance</span> {(route.distance / 1000).toFixed(1)} km</span>
                         </div>
                     </div>
-                </div>
+                </>
             ) : (
                  <div className="flex-1 flex flex-col items-center justify-center p-6 bg-white border-2 border-dashed border-slate-100 m-4 rounded-xl">
                     <span className="material-symbols-outlined text-slate-200 text-4xl mb-2">move_to_inbox</span>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Arrastra un bloque de ruta aquí</p>
                 </div>
             )}
+            </div>
         </div>
     );
 }
