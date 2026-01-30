@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useTransition, useEffect, useMemo } from 'react';
@@ -72,7 +73,47 @@ function UnassignedRouteCard({ route, clusterIndex, isOverlay = false }: { route
     );
 }
 
-function DriverColumn({ driver, route, clusterIndex }: { driver: StaffMember, route: ClusteredRoute | null, clusterIndex: number | null }) {
+function AssignedRouteCard({ route, clusterIndex, onUnassign }: { route: ClusteredRoute; clusterIndex: number; onUnassign: () => void; }) {
+    return (
+        <div className="bg-card dark:bg-slate-800/60 border border-border dark:border-slate-700 rounded-xl p-4 m-4 shadow-sm">
+            <div className="flex justify-between items-center">
+                <h3 className="font-bold text-foreground">Bloque #{clusterIndex + 1}</h3>
+                <Button variant="ghost" size="sm" onClick={onUnassign} className="text-xs font-bold text-muted-foreground hover:bg-destructive/10 hover:text-destructive gap-1">
+                    <span className="material-symbols-outlined text-base">close</span>
+                    DESASIGNAR
+                </Button>
+            </div>
+            <div className="mt-2 text-sm text-muted-foreground space-y-2 pt-2 border-t border-border dark:border-slate-700">
+                <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">inventory_2</span>
+                    <span>{route.orders.length} Pedidos</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">distance</span>
+                    <span>{(route.distance / 1000).toFixed(1)} km</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">timer</span>
+                    <span>{formatDuration(route.duration)} est.</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function DriverColumn({ 
+    driver, 
+    route, 
+    clusterIndex, 
+    onUnassign,
+    activeCluster
+}: { 
+    driver: StaffMember, 
+    route: ClusteredRoute | null, 
+    clusterIndex: number | null,
+    onUnassign: (clusterIndex: number) => void,
+    activeCluster: { route: ClusteredRoute, index: number } | null 
+}) {
     const { isOver, setNodeRef } = useDroppable({
         id: driver.id,
         data: { type: 'driver', driver }
@@ -84,11 +125,13 @@ function DriverColumn({ driver, route, clusterIndex }: { driver: StaffMember, ro
         disabled: !route,
     });
 
-    const orders = route?.orders || [];
     const capacity = 12; // Mock capacity
 
     return (
-        <div ref={setNodeRef} className={cn("bg-card rounded-2xl border border-border shadow-sm flex flex-col min-w-[320px]", isOver && "bg-muted", route && !isDragging && "border-blue-500/50 dark:border-blue-500/50 ring-2 ring-blue-500/20")}>
+        <div ref={setNodeRef} className={cn(
+            "bg-card rounded-2xl border border-border shadow-sm flex flex-col min-w-[320px] transition-all", 
+            isOver && !route && "border-primary border-2 border-dashed",
+        )}>
             <div ref={setDraggableNodeRef} {...(route ? listeners : {})} {...(route ? attributes : {})} className={cn("p-5 border-b border-border bg-muted/30 dark:bg-slate-800/40 rounded-t-2xl", route && "cursor-grab active:cursor-grabbing")} >
                 <div className="flex items-center gap-4 mb-4">
                     <div className="relative">
@@ -104,39 +147,29 @@ function DriverColumn({ driver, route, clusterIndex }: { driver: StaffMember, ro
                 <div className="space-y-1.5">
                     <div className="flex justify-between items-end">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase">Capacidad de Carga</span>
-                        <span className="text-xs font-bold text-accent">{orders.length} / {capacity}</span>
+                        <span className="text-xs font-bold text-accent">{route?.orders.length || 0} / {capacity}</span>
                     </div>
                     <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div className="bg-accent h-full transition-all shadow-neon-glow" style={{width: `${(orders.length / capacity) * 100}%`}}></div>
+                        <div className="bg-accent h-full transition-all shadow-neon-glow" style={{width: `${((route?.orders.length || 0) / capacity) * 100}%`}}></div>
                     </div>
                 </div>
             </div>
             
-            <div className={cn("flex-1 flex flex-col min-h-0", isDragging && "opacity-20")}>
-            {route ? (
-                 <div className="flex-1 flex flex-col bg-card/20 dark:bg-navy-dark/40 overflow-hidden">
-                    <div className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
-                        {orders.map((order, index) => (
-                            <div key={order.id} className="p-3 bg-card border border-border rounded-lg group hover:border-blue-500/30 transition-all cursor-move">
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="font-bold text-blue-400 text-xs">#{index + 1} • {order.deliveryTime ? new Date(order.deliveryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                                    <span className="material-symbols-outlined text-slate-600 text-sm">drag_handle</span>
-                                </div>
-                                <p className="text-muted-foreground font-medium text-xs truncate">{order.address}</p>
-                            </div>
-                        ))}
+            <div className={cn("flex-1 flex flex-col min-h-0", isDragging && "opacity-50")}>
+            {route && clusterIndex !== null ? (
+                 <AssignedRouteCard route={route} clusterIndex={clusterIndex} onUnassign={() => onUnassign(clusterIndex)} />
+            ) : isOver && activeCluster ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                    <div className="w-16 h-16 rounded-full bg-muted dark:bg-slate-800 flex items-center justify-center text-muted-foreground dark:text-slate-500 mb-4">
+                        <span className="material-symbols-outlined text-4xl">download</span>
                     </div>
-                    <div className="p-4 bg-muted/50 dark:bg-slate-800/40 border-t border-border rounded-b-2xl">
-                         <div className="flex justify-between items-center text-[10px] font-bold text-muted-foreground">
-                             <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">timer</span> {formatDuration(route.duration)} est.</span>
-                             <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">distance</span> {(route.distance / 1000).toFixed(1)} km</span>
-                        </div>
-                    </div>
+                    <h3 className="font-bold text-lg text-foreground">Soltar para Asignar</h3>
+                    <p className="text-sm text-muted-foreground">Asignará Bloque #{activeCluster.index + 1} automáticamente</p>
                 </div>
             ) : (
-                 <div className="flex-1 flex flex-col items-center justify-center p-6 m-4 border-2 border-dashed border-border dark:border-slate-700 rounded-xl">
+                 <div className="flex-1 flex flex-col items-center justify-center p-6 m-4 text-center">
                     <span className="material-symbols-outlined text-slate-200 dark:text-slate-700 text-4xl mb-2">move_to_inbox</span>
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest text-center">Arrastra un bloque de ruta aquí</p>
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">Arrastra un bloque de ruta aquí</p>
                 </div>
             )}
             </div>
@@ -252,6 +285,19 @@ export default function RoutesPage() {
         });
     }
 
+    const handleUnassign = (clusterIndexToUnassign: number) => {
+        startTransition(() => {
+            setAssignedRoutes(prev => {
+                const newAssignments = { ...prev };
+                const driverId = Object.keys(newAssignments).find(key => newAssignments[key] === clusterIndexToUnassign);
+                if (driverId) {
+                    delete newAssignments[driverId];
+                }
+                return newAssignments;
+            });
+        });
+    };
+
     
     return (
        <DndContext 
@@ -271,7 +317,7 @@ export default function RoutesPage() {
                         <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Franja Horaria</label>
                          <div className="relative">
                             <Select onValueChange={handleTimeSlotChange} value={timeSlot} disabled={isPending}>
-                                <SelectTrigger className="appearance-none bg-muted dark:bg-card dark:border-border rounded-xl px-4 py-2.5 text-sm font-semibold text-foreground focus:ring-2 focus:ring-blue-500/20 cursor-pointer min-w-[200px]">
+                                <SelectTrigger className="appearance-none bg-muted dark:bg-slate-card dark:border-border rounded-xl px-4 py-2.5 text-sm font-semibold text-foreground focus:ring-2 focus:ring-blue-500/20 cursor-pointer min-w-[200px]">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -303,13 +349,13 @@ export default function RoutesPage() {
                         )}
                     </div>
                 </aside>
-                <section className="flex-1 bg-background dark:bg-navy-dark p-6 overflow-x-auto custom-scrollbar flex gap-6">
+                <section className="flex-1 bg-background dark:bg-navy-dark/40 p-6 overflow-x-auto custom-scrollbar flex gap-6">
                     {isPending && Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-full min-w-[320px] rounded-2xl" />)}
                     
                     {!isPending && staff.map(driver => {
                        const assignedClusterIndex = assignedRoutes[driver.id];
                        const route = assignedClusterIndex !== undefined ? clusters[assignedClusterIndex] : null;
-                       return <DriverColumn key={driver.id} driver={driver} route={route} clusterIndex={assignedClusterIndex} />
+                       return <DriverColumn key={driver.id} driver={driver} route={route} clusterIndex={assignedClusterIndex} onUnassign={handleUnassign} activeCluster={activeCluster} />
                     })}
                     
                     {!isPending && (
