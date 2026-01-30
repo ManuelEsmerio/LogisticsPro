@@ -29,8 +29,10 @@ OrderWise es una aplicación web construida con Next.js, diseñada para la gesti
 
 -   **Frontend**: Next.js 15 (App Router), React 19, TypeScript.
 -   **Estilos**: TailwindCSS y componentes `shadcn/ui` para una interfaz moderna y personalizable.
--   **Backend**: Next.js Server Actions para manejar toda la lógica del lado del servidor (mutaciones de datos y llamadas a APIs externas).
--   **Datos**: La aplicación utiliza un almacén de datos **en memoria** (`src/lib/data.ts`) para simular una base de datos. Los datos se reinician cada vez que el servidor se recarga.
+-   **Backend**:
+    - Next.js Server Actions para manejar la lógica de negocio (geocodificación, optimización de rutas).
+    - **`json-server`** para simular una API RESTful para las operaciones CRUD (Crear, Leer, Actualizar, Eliminar) de pedidos y personal.
+-   **Datos**: La aplicación utiliza un archivo `db.json` como base de datos local, gestionado por `json-server`.
 -   **Servicios Externos**:
     -   **Google Geocoding API**: Para convertir direcciones físicas en coordenadas de latitud y longitud.
     -   **Google Routes API**: Para calcular el orden óptimo de visita dentro de un grupo de pedidos.
@@ -48,8 +50,9 @@ OrderWise es una aplicación web construida con Next.js, diseñada para la gesti
     -   `dashboard/`: Componentes específicos del panel de control (tablas de datos, formularios, etc.).
     -   `ui/`: Componentes base de la interfaz de usuario de `shadcn/ui`.
 -   `src/lib/actions.ts`: **(¡Archivo muy importante!)** Contiene las Server Actions que ejecutan la lógica del backend. Aquí se procesan los formularios, se llama a las APIs de Google y se realiza el clustering.
--   `src/lib/data.ts`: Define y exporta los datos de prueba (mock data) que la aplicación utiliza. Actúa como una base de datos simulada en memoria.
+-   `src/lib/data.ts`: Contiene las funciones que interactúan con la API de `json-server` para obtener y modificar los datos.
 -   `src/lib/definitions.ts`: Contiene las definiciones de tipos de TypeScript y los esquemas de validación de Zod para los formularios.
+-   `db.json`: La base de datos de la aplicación. Contiene los arrays de `orders` y `staff`.
 -   `.env`: Archivo para almacenar variables de entorno, como la clave de la API de Google Maps.
 
 ---
@@ -90,9 +93,21 @@ La optimización de rutas requiere una clave de API de Google Maps Platform.
     GOOGLE_MAPS_API_KEY="AQUI_VA_TU_CLAVE_DE_API"
     ```
 
-### 4. Ejecutar la Aplicación
+### 4. Ejecutar el Servidor de API Simulado (json-server)
 
-Inicia el servidor de desarrollo:
+Para que la aplicación pueda guardar y leer datos, necesitas ejecutar un servidor de API simulado. Este servidor leerá y escribirá en el archivo `db.json`.
+
+En una **terminal separada**, ejecuta el siguiente comando:
+
+```bash
+npm run json-server
+```
+
+Deberías ver un mensaje indicando que el servidor está corriendo en `http://localhost:3001`. **Deja esta terminal abierta mientras usas la aplicación.**
+
+### 5. Ejecutar la Aplicación
+
+Con el servidor de API ya en marcha, abre **otra terminal** y ejecuta el servidor de desarrollo de Next.js:
 
 ```bash
 npm run dev
@@ -123,7 +138,7 @@ El núcleo de la funcionalidad de optimización se encuentra en el archivo `src/
     1.  La acción `saveOrder` recibe los datos del formulario.
     2.  Llama a la función `geocodeAddress`, pasándole la dirección del pedido.
     3.  `geocodeAddress` hace una petición `fetch` a la **Google Geocoding API**.
-    4.  La API devuelve la latitud y longitud, que se guardan en la base de datos (en nuestro caso, en el array de `orders` en memoria) junto con el resto de la información del pedido.
+    4.  La API devuelve la latitud y longitud, que se guardan en la base de datos (`db.json` a través de `json-server`) junto con el resto de la información del pedido.
     5.  Este paso es crucial y se hace solo una vez por pedido para minimizar costos.
 
 ### 2. Optimización de Rutas en Dos Pasos
