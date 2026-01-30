@@ -92,11 +92,6 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
             <span className="material-symbols-outlined text-primary text-3xl">person_add</span>
             <DialogTitle className="text-primary dark:text-white text-2xl font-bold tracking-tight">{isEditMode ? "Editar Personal" : "Registro de Nuevo Personal"}</DialogTitle>
           </div>
-           <DialogClose asChild>
-             <button className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
-                <span className="material-symbols-outlined">close</span>
-            </button>
-          </DialogClose>
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col overflow-hidden">

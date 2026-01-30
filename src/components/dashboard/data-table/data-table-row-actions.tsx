@@ -73,17 +73,37 @@ export function DataTableRowActions<TData extends Order>({
       </div>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente el pedido <span className="font-semibold">{row.original.orderNumber}</span>.
+        <AlertDialogContent className="flex flex-col items-center text-center">
+          <div className="mb-6 flex items-center justify-center size-20 rounded-full bg-coral-soft/20 text-destructive">
+            <span className="material-symbols-outlined !text-5xl">warning</span>
+          </div>
+          <AlertDialogHeader className="text-center flex flex-col items-center">
+            <AlertDialogTitle className="text-2xl md:text-3xl font-bold tracking-tight">
+              ¿Estás seguro de eliminar este registro?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+                <div className="bg-silk-gray dark:bg-background-dark/50 px-6 py-3 rounded-xl my-8 w-full">
+                  <p className="text-slate-custom dark:text-gray-300 text-lg font-medium leading-normal">
+                    Pedido {row.original.orderNumber} - {row.original.product}
+                  </p>
+                </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Eliminar</AlertDialogAction>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-4 w-full justify-center">
+            <AlertDialogCancel asChild>
+              <Button variant="secondary" className="flex-1 min-w-[160px] cursor-pointer rounded-full h-14 px-6 bg-slate-custom hover:bg-slate-700 text-white text-base font-bold">
+                No, mantener
+              </Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" onClick={handleDelete} className="flex-1 min-w-[160px] cursor-pointer rounded-full h-14 px-6 text-base font-bold">
+                Sí, eliminar
+              </Button>
+            </AlertDialogAction>
           </AlertDialogFooter>
+          <p className="mt-8 text-slate-custom/50 dark:text-gray-500 text-xs font-medium uppercase tracking-[0.1em]">
+            Esta acción no se puede deshacer
+          </p>
         </AlertDialogContent>
       </AlertDialog>
     </>

@@ -56,11 +56,14 @@ export default {
         'zone-south': '#F59E0B',
         'zone-center': '#0D9488',
         forest: "#166534",
+        'slate-custom': '#475569',
+        'coral-soft': '#fca5a5',
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        lg: "1.5rem",
+        md: "1rem",
+        sm: "calc(1rem - 4px)",
+        DEFAULT: "1rem",
       },
       keyframes: {
         'accordion-down': {
