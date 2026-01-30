@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { getClusteredRoutesAction } from '@/lib/actions';
+import { getClusteredRoutesAction, updateOrdersStatus } from '@/lib/actions';
 import type { ClusteredRoute, Order, StaffMember } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -228,50 +228,49 @@ export default function RoutesPage() {
         if (!active || !over) return;
 
         const draggedData = active.data.current;
-        const overData = over.data.current;
-        const overId = over.id;
-
         if (draggedData?.type !== 'cluster') return;
         
         const draggedClusterIndex = draggedData.clusterIndex as number;
+        const ordersInRoute = clusters[draggedClusterIndex]?.orders.map(o => o.id);
+        if (!ordersInRoute) return;
 
-        if (overId === 'unassigned' || (overData && overData.id === 'unassigned')) {
-             startTransition(() => {
-                setAssignedRoutes(prev => {
-                    const newAssignments = { ...prev };
-                    const sourceDriverId = Object.keys(newAssignments).find(key => newAssignments[key] === draggedClusterIndex);
-                    if (sourceDriverId) {
+        // Case 1: Dropped over the unassigned area
+        if (over.id === 'unassigned') {
+            const sourceDriverId = Object.keys(assignedRoutes).find(key => assignedRoutes[key] === draggedClusterIndex);
+            if(sourceDriverId) {
+                 startTransition(() => {
+                    setAssignedRoutes(prev => {
+                        const newAssignments = { ...prev };
                         delete newAssignments[sourceDriverId];
-                    }
-                    return newAssignments;
+                        return newAssignments;
+                    });
+                    updateOrdersStatus(ordersInRoute, 'due');
                 });
-            });
+            }
             return;
         }
-
+        
+        // Case 2: Dropped over a driver column
+        const overData = over.data.current;
         if (overData?.type === 'driver') {
-            const targetDriverId = String(overId);
+            const targetDriverId = String(over.id);
+            if (assignedRoutes[targetDriverId] !== undefined) {
+                 toast({ variant: "destructive", title: "Asignación Fallida", description: "El transportista ya tiene una ruta asignada." });
+                 return;
+            }
 
             startTransition(() => {
                 setAssignedRoutes(prev => {
                     const newAssignments = { ...prev };
                     const sourceDriverId = Object.keys(newAssignments).find(key => newAssignments[key] === draggedClusterIndex);
-                    const existingRouteOfTarget = newAssignments[targetDriverId];
-                    
                     if (sourceDriverId) {
                         delete newAssignments[sourceDriverId];
                     }
-                    
-                    if (existingRouteOfTarget !== undefined && sourceDriverId) {
-                        newAssignments[sourceDriverId] = existingRouteOfTarget;
-                    }
-                    
                     newAssignments[targetDriverId] = draggedClusterIndex;
-
                     return newAssignments;
                 });
+                updateOrdersStatus(ordersInRoute, 'assigned');
             });
-            return;
         }
     };
 
@@ -301,6 +300,7 @@ export default function RoutesPage() {
     }
 
     const handleUnassign = (clusterIndexToUnassign: number) => {
+        const ordersToUnassign = clusters[clusterIndexToUnassign]?.orders.map(o => o.id);
         startTransition(() => {
             setAssignedRoutes(prev => {
                 const newAssignments = { ...prev };
@@ -310,6 +310,9 @@ export default function RoutesPage() {
                 }
                 return newAssignments;
             });
+            if (ordersToUnassign) {
+                updateOrdersStatus(ordersToUnassign, 'due');
+            }
         });
     };
 

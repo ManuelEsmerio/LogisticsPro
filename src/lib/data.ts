@@ -306,14 +306,16 @@ const mockOrders: Omit<Order, 'id' | 'createdAt'>[] = [
 ];
 
 
-// Populate the in-memory store
-mockOrders.forEach((order, index) => {
-    orders.push({
-        ...order,
-        id: String(index + 1),
-        createdAt: new Date(Date.now() - (mockOrders.length - index) * 3600000), // created in last few hours
+// Populate the in-memory store if it's empty
+if (orders.length === 0) {
+    mockOrders.forEach((order, index) => {
+        orders.push({
+            ...order,
+            id: String(index + 1),
+            createdAt: new Date(Date.now() - (mockOrders.length - index) * 3600000), // created in last few hours
+        });
     });
-});
+}
 
 
 // Simulate network latency
@@ -390,4 +392,13 @@ export async function deleteStaff(id: string): Promise<boolean> {
     const initialLength = staff.length;
     staff = staff.filter(s => s.id !== id);
     return staff.length < initialLength;
+}
+
+export async function updateMultipleOrdersStatus(orderIds: string[], status: Order['paymentStatus']): Promise<void> {
+  await sleep(50); // a quick update
+  orders = orders.map(order => 
+      orderIds.includes(order.id) 
+          ? { ...order, paymentStatus: status } 
+          : order
+  );
 }

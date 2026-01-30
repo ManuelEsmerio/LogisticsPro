@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { addOrder, deleteOrder, getOrders, updateOrder, addStaff, updateStaff, deleteStaff, getStaff } from "@/lib/data";
+import { addOrder, deleteOrder, getOrders, updateOrder, addStaff, updateStaff, deleteStaff, getStaff, updateMultipleOrdersStatus } from "@/lib/data";
 import { orderSchema, staffMemberSchema, type Order, type OrderFormValues, type StaffMember, type StaffMemberFormValues, Waypoint } from "@/lib/definitions";
 import { DBSCAN } from 'density-clustering';
 
@@ -240,4 +240,15 @@ export async function deleteStaffAction(id: string) {
     } catch (error) {
         return { message: 'Error de base de datos: No se pudo eliminar al miembro del personal.' };
     }
+}
+
+export async function updateOrdersStatus(orderIds: string[], status: Order['paymentStatus']) {
+    try {
+        await updateMultipleOrdersStatus(orderIds, status);
+    } catch (error) {
+        console.error(error);
+        return { message: 'Error de base de datos: No se pudo actualizar el estado del pedido.' };
+    }
+    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/routes');
 }
