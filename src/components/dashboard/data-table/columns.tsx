@@ -57,6 +57,17 @@ const DeliveryTimeCell = ({ row }: { row: Row<Order> }) => {
   return <span className="text-muted-foreground">N/A</span>;
 };
 
+const CreatedAtCell = ({ row }: { row: Row<Order> }) => {
+  const createdAt = row.getValue("createdAt") as string;
+  const [formattedDate, setFormattedDate] = useState("");
+
+  useEffect(() => {
+    setFormattedDate(format(new Date(createdAt), "PP"));
+  }, [createdAt]);
+
+  return <span>{formattedDate}</span>;
+}
+
 
 export const columns: ColumnDef<Order>[] = [
   {
@@ -109,7 +120,7 @@ export const columns: ColumnDef<Order>[] = [
   {
     accessorKey: "createdAt",
     header: "Fecha de Creación",
-    cell: ({ row }) => format(new Date(row.getValue("createdAt")), "PP"),
+    cell: CreatedAtCell,
   },
   {
     id: "actions",
