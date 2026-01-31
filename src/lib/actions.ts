@@ -3,8 +3,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { addOrder, deleteOrder, getOrders, updateOrder, addStaff, updateStaff, deleteStaff, getStaff, updateMultipleOrdersStatus } from "@/lib/data";
-import { orderSchema, staffMemberSchema, type Order, type OrderFormValues, type StaffMember, type StaffMemberFormValues, Waypoint } from "@/lib/definitions";
+import { addOrder, deleteOrder, getOrders, updateOrder, addStaff, updateStaff, deleteStaff, getStaff, updateMultipleOrdersStatus, getRouteAssignments, addRouteAssignments } from "@/lib/data";
+import { orderSchema, staffMemberSchema, type Order, type OrderFormValues, type StaffMember, type StaffMemberFormValues, type RouteAssignment, Waypoint } from "@/lib/definitions";
 import { DBSCAN } from 'density-clustering';
 
 // --- Real Geocoding with Google Maps API ---
@@ -152,7 +152,11 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
     try {
         const allOrders = await getOrders();
         const deliveryOrders = allOrders
-            .filter(order => order.deliveryType === 'delivery' && order.deliveryTimeSlot === timeSlot && order.paymentStatus === 'due');
+            .filter(order =>
+                order.deliveryType === 'delivery' &&
+                order.deliveryTimeSlot === timeSlot &&
+                (order.paymentStatus === 'due' || order.paymentStatus === 'assigned')
+            );
         
         const allStaff = await getStaff();
         const allDrivers = allStaff.filter(s => s.role === 'Repartidor');
@@ -199,6 +203,79 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
     } catch (error) {
         console.error(error);
         return { error: 'No se pudieron obtener las rutas agrupadas.' };
+    }
+}
+
+export async function recalculateRoutesAction(timeSlot: 'morning' | 'afternoon' | 'evening') {
+    try {
+        const allOrders = await getOrders();
+        const deliveryOrders = allOrders
+            .filter(order =>
+                order.deliveryType === 'delivery' &&
+                order.deliveryTimeSlot === timeSlot &&
+                (order.paymentStatus === 'due' || order.paymentStatus === 'assigned')
+            );
+
+        await Promise.all(
+            deliveryOrders.map(async order => {
+                const { latitude, longitude } = await geocodeAddress(order.address);
+                await updateOrder(order.id, { latitude, longitude });
+            })
+        );
+
+        const result = await getClusteredRoutesAction(timeSlot);
+        return result;
+    } catch (error) {
+        console.error(error);
+        return { error: 'No se pudieron recalcular las rutas.' };
+    }
+}
+
+export async function getRouteAssignmentsAction(timeSlot: RouteAssignment['timeSlot']) {
+    try {
+        const assignments = await getRouteAssignments(timeSlot);
+        return { assignments };
+    } catch (error) {
+        console.error(error);
+        return { error: 'No se pudieron obtener las asignaciones.' };
+    }
+}
+
+export async function confirmRouteAssignmentsAction(
+    timeSlot: RouteAssignment['timeSlot'],
+    assignments: Array<Pick<RouteAssignment, 'driverId' | 'driverName' | 'orderIds' | 'distance' | 'duration'>>
+) {
+    try {
+        if (!assignments.length) {
+            return { message: 'No hay asignaciones para confirmar.' };
+        }
+
+        const existing = await getRouteAssignments(timeSlot);
+        const existingDrivers = new Set(existing.map(a => a.driverId));
+        const now = new Date().toISOString();
+
+        const toCreate = assignments
+            .filter(a => !existingDrivers.has(a.driverId))
+            .map(a => ({
+                ...a,
+                timeSlot,
+                createdAt: now,
+                locked: true,
+            }));
+
+        if (toCreate.length > 0) {
+            await addRouteAssignments(toCreate);
+            const allOrderIds = toCreate.flatMap(a => a.orderIds);
+            if (allOrderIds.length > 0) {
+                await updateMultipleOrdersStatus(allOrderIds, 'assigned');
+            }
+        }
+
+        revalidatePath('/dashboard/routes');
+        return { message: 'Rutas confirmadas y despachadas.' };
+    } catch (error) {
+        console.error(error);
+        return { message: 'No se pudieron confirmar las rutas.' };
     }
 }
 

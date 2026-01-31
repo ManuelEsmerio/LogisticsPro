@@ -9,8 +9,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { getClusteredRoutesAction, updateOrdersStatus } from '@/lib/actions';
-import type { ClusteredRoute, Order, StaffMember } from '@/lib/definitions';
+import { confirmRouteAssignmentsAction, getClusteredRoutesAction, getRouteAssignmentsAction, updateOrdersStatus } from '@/lib/actions';
+import type { ClusteredRoute, Order, RouteAssignment, StaffMember } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,23 @@ import Image from 'next/image';
 import { DndContext, useDraggable, useDroppable, DragOverlay, closestCenter, UniqueIdentifier } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { AddDriverDialog } from '@/components/dashboard/routes/add-driver-dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 
 function formatDuration(duration: string): string {
@@ -26,6 +43,12 @@ function formatDuration(duration: string): string {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     return `${h > 0 ? `${h}h ` : ''}${m}m`;
+}
+
+function sameOrderSet(left: string[], right: string[]) {
+    if (left.length !== right.length) return false;
+    const rightSet = new Set(right);
+    return left.every(id => rightSet.has(id));
 }
 
 function UnassignedRouteCard({ route, clusterIndex, isOverlay = false }: { route: ClusteredRoute; clusterIndex: number; isOverlay?: boolean }) {
@@ -73,11 +96,23 @@ function UnassignedRouteCard({ route, clusterIndex, isOverlay = false }: { route
     );
 }
 
-function AssignedRouteCard({ route, clusterIndex, onUnassign }: { route: ClusteredRoute; clusterIndex: number; onUnassign: () => void; }) {
+function AssignedRouteCard({
+    route,
+    clusterIndex,
+    onUnassign,
+    isLocked,
+    onViewDetails
+}: {
+    route: ClusteredRoute;
+    clusterIndex: number;
+    onUnassign: () => void;
+    isLocked: boolean;
+    onViewDetails: () => void;
+}) {
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: `cluster-${clusterIndex}`,
         data: { route, clusterIndex, type: 'cluster' },
-        disabled: !route,
+        disabled: !route || isLocked,
     });
 
     const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined;
@@ -86,10 +121,37 @@ function AssignedRouteCard({ route, clusterIndex, onUnassign }: { route: Cluster
         <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="bg-card dark:bg-slate-800/60 border border-border dark:border-slate-700 rounded-xl p-4 m-4 shadow-sm cursor-grab active:cursor-grabbing">
             <div className="flex justify-between items-center">
                 <h3 className="font-bold text-foreground">Bloque #{clusterIndex + 1}</h3>
-                <Button variant="ghost" size="sm" onClick={onUnassign} className="text-xs font-bold text-muted-foreground hover:bg-destructive/10 hover:text-destructive gap-1">
-                    <span className="material-symbols-outlined text-base">close</span>
-                    DESASIGNAR
-                </Button>
+                {!isLocked ? (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            onUnassign();
+                        }}
+                        className="text-xs font-bold text-muted-foreground hover:bg-destructive/10 hover:text-destructive gap-1"
+                    >
+                        <span className="material-symbols-outlined text-base">close</span>
+                        DESASIGNAR
+                    </Button>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Confirmada</span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                onViewDetails();
+                            }}
+                            className="h-7 px-2 text-[10px] font-bold"
+                        >
+                            Ver detalle
+                        </Button>
+                    </div>
+                )}
             </div>
             <div className="mt-2 text-sm text-muted-foreground space-y-2 pt-2 border-t border-border dark:border-slate-700">
                 <div className="flex items-center gap-2">
@@ -115,14 +177,18 @@ function DriverColumn({
     clusterIndex, 
     onUnassign,
     onRemove,
-    activeCluster
+    activeCluster,
+    isLocked,
+    onViewDetails
 }: { 
     driver: StaffMember, 
     route: ClusteredRoute | null, 
     clusterIndex: number | null,
-    onUnassign: (clusterIndex: number) => void,
+    onUnassign: (driverId: string, clusterIndex: number) => void,
     onRemove: (driverId: string) => void,
-    activeCluster: { route: ClusteredRoute, index: number } | null 
+    activeCluster: { route: ClusteredRoute, index: number } | null,
+    isLocked: boolean,
+    onViewDetails: (driver: StaffMember, route: ClusteredRoute, clusterIndex: number) => void
 }) {
     const { isOver, setNodeRef } = useDroppable({
         id: driver.id,
@@ -163,8 +229,14 @@ function DriverColumn({
             </div>
             
             <div className={cn("flex-1 flex flex-col min-h-0")}>
-            {route && clusterIndex !== null ? (
-                 <AssignedRouteCard route={route} clusterIndex={clusterIndex} onUnassign={() => onUnassign(clusterIndex)} />
+              {route && clusterIndex !== null ? (
+                  <AssignedRouteCard
+                    route={route}
+                    clusterIndex={clusterIndex}
+                    onUnassign={() => onUnassign(driver.id, clusterIndex)}
+                    isLocked={isLocked}
+                    onViewDetails={() => onViewDetails(driver, route, clusterIndex)}
+                  />
             ) : isOver && activeCluster ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                     <div className="w-16 h-16 rounded-full bg-muted dark:bg-slate-800 flex items-center justify-center text-muted-foreground dark:text-slate-500 mb-4">
@@ -193,8 +265,14 @@ export default function RoutesPage() {
     const [allStaff, setAllStaff] = useState<StaffMember[]>([]);
     const [displayedStaff, setDisplayedStaff] = useState<StaffMember[]>([]);
     const [assignedRoutes, setAssignedRoutes] = useState<Record<string, number>>({}); // driverId -> clusterIndex
+    const [lockedDrivers, setLockedDrivers] = useState<Record<string, boolean>>({});
     const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
     const [isAddDriverOpen, setIsAddDriverOpen] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [detailData, setDetailData] = useState<{ driver: StaffMember; route: ClusteredRoute; clusterIndex: number } | null>(null);
+    const [isRecalcConfirmOpen, setIsRecalcConfirmOpen] = useState(false);
+    const [isRecalculating, setIsRecalculating] = useState(false);
 
 
     const activeCluster = useMemo(() => {
@@ -237,8 +315,12 @@ export default function RoutesPage() {
         // Case 1: Dropped over the unassigned area
         if (over.id === 'unassigned') {
             const sourceDriverId = Object.keys(assignedRoutes).find(key => assignedRoutes[key] === draggedClusterIndex);
-            if(sourceDriverId) {
-                 startTransition(() => {
+            if (sourceDriverId) {
+                if (lockedDrivers[sourceDriverId]) {
+                    toast({ variant: "destructive", title: "Ruta confirmada", description: "Esta ruta ya fue confirmada y no puede desasignarse." });
+                    return;
+                }
+                startTransition(() => {
                     setAssignedRoutes(prev => {
                         const newAssignments = { ...prev };
                         delete newAssignments[sourceDriverId];
@@ -252,18 +334,26 @@ export default function RoutesPage() {
         
         // Case 2: Dropped over a driver column
         const overData = over.data.current;
-        if (overData?.type === 'driver') {
-            const targetDriverId = String(over.id);
-            if (assignedRoutes[targetDriverId] !== undefined) {
-                 toast({ variant: "destructive", title: "Asignación Fallida", description: "El transportista ya tiene una ruta asignada." });
-                 return;
-            }
+           if (overData?.type === 'driver') {
+              const targetDriverId = String(over.id);
+              if (lockedDrivers[targetDriverId]) {
+                  toast({ variant: "destructive", title: "Ruta confirmada", description: "Este transportista ya tiene una ruta confirmada." });
+                  return;
+              }
+              const existingAssignment = assignedRoutes[targetDriverId];
+              if (existingAssignment !== undefined && existingAssignment !== draggedClusterIndex) {
+                  toast({ variant: "destructive", title: "Asignación Fallida", description: "El transportista ya tiene una ruta asignada." });
+                  return;
+              }
 
             startTransition(() => {
                 setAssignedRoutes(prev => {
                     const newAssignments = { ...prev };
                     const sourceDriverId = Object.keys(newAssignments).find(key => newAssignments[key] === draggedClusterIndex);
                     if (sourceDriverId) {
+                        if (lockedDrivers[sourceDriverId]) {
+                            return newAssignments;
+                        }
                         delete newAssignments[sourceDriverId];
                     }
                     newAssignments[targetDriverId] = draggedClusterIndex;
@@ -283,31 +373,77 @@ export default function RoutesPage() {
             setAllStaff([]);
             setDisplayedStaff([]);
             setAssignedRoutes({});
+            setLockedDrivers({});
         }
 
         startTransition(async () => {
-            const result = await getClusteredRoutesAction(value);
+            const [result, assignmentsResult] = await Promise.all([
+                getClusteredRoutesAction(value),
+                getRouteAssignmentsAction(value)
+            ]);
+
             if (result && result.clusteredRoutes) {
-                setClusters(result.clusteredRoutes);
-                if(result.staff && result.allStaff) {
+                let nextClusters = [...result.clusteredRoutes];
+                const assignmentMap: Record<string, number> = {};
+                const lockedMap: Record<string, boolean> = {};
+
+                const assignments: RouteAssignment[] = assignmentsResult?.assignments ?? [];
+                const orderLookup = new Map<string, Order>();
+                nextClusters.forEach(cluster => {
+                    cluster.orders.forEach(order => orderLookup.set(order.id, order));
+                });
+
+                assignments.forEach(assignment => {
+                    lockedMap[assignment.driverId] = assignment.locked;
+                    const assignmentOrderIds = assignment.orderIds;
+                    let matchIndex = nextClusters.findIndex(cluster =>
+                        sameOrderSet(cluster.orders.map(o => o.id), assignmentOrderIds)
+                    );
+
+                    if (matchIndex === -1) {
+                        const orders = assignmentOrderIds
+                            .map(id => orderLookup.get(id))
+                            .filter((order): order is Order => !!order);
+                        if (orders.length > 0) {
+                            nextClusters.push({
+                                timeSlot: assignment.timeSlot,
+                                orders,
+                                distance: assignment.distance,
+                                duration: assignment.duration,
+                            });
+                            matchIndex = nextClusters.length - 1;
+                        }
+                    }
+
+                    if (matchIndex !== -1) {
+                        assignmentMap[assignment.driverId] = matchIndex;
+                    }
+                });
+
+                setClusters(nextClusters);
+                setAssignedRoutes(assignmentMap);
+                setLockedDrivers(lockedMap);
+
+                if (result.staff && result.allStaff) {
                     setAllStaff(result.allStaff);
                     setDisplayedStaff(result.staff);
                 }
             } else {
-                 toast({ variant: "destructive", title: "Error", description: result.error || "No se pudieron obtener las rutas." });
+                toast({ variant: "destructive", title: "Error", description: result.error || "No se pudieron obtener las rutas." });
             }
         });
     }
 
-    const handleUnassign = (clusterIndexToUnassign: number) => {
+    const handleUnassign = (driverId: string, clusterIndexToUnassign: number) => {
+        if (lockedDrivers[driverId]) {
+            toast({ variant: "destructive", title: "Ruta confirmada", description: "Esta ruta ya fue confirmada y no puede desasignarse." });
+            return;
+        }
         const ordersToUnassign = clusters[clusterIndexToUnassign]?.orders.map(o => o.id);
         startTransition(() => {
             setAssignedRoutes(prev => {
                 const newAssignments = { ...prev };
-                const driverId = Object.keys(newAssignments).find(key => newAssignments[key] === clusterIndexToUnassign);
-                if (driverId) {
-                    delete newAssignments[driverId];
-                }
+                delete newAssignments[driverId];
                 return newAssignments;
             });
             if (ordersToUnassign) {
@@ -320,7 +456,7 @@ export default function RoutesPage() {
         startTransition(() => {
             const clusterIndexToUnassign = assignedRoutes[driverId];
             if (clusterIndexToUnassign !== undefined) {
-                handleUnassign(clusterIndexToUnassign);
+                handleUnassign(driverId, clusterIndexToUnassign);
             }
             setDisplayedStaff(prev => prev.filter(d => d.id !== driverId));
         });
@@ -335,6 +471,65 @@ export default function RoutesPage() {
             });
         });
         setIsAddDriverOpen(false);
+    };
+
+    const handleViewDetails = (driver: StaffMember, route: ClusteredRoute, clusterIndex: number) => {
+        setDetailData({ driver, route, clusterIndex });
+        setIsDetailOpen(true);
+    };
+
+    const assignedDriverSummaries = useMemo(() => {
+        return displayedStaff
+            .map(driver => {
+                const clusterIndex = assignedRoutes[driver.id];
+                if (clusterIndex === undefined) return null;
+                const route = clusters[clusterIndex];
+                if (!route) return null;
+                return {
+                    driver,
+                    clusterIndex,
+                    route,
+                    isLocked: !!lockedDrivers[driver.id],
+                };
+            })
+            .filter((item): item is { driver: StaffMember; clusterIndex: number; route: ClusteredRoute; isLocked: boolean } => !!item);
+    }, [displayedStaff, assignedRoutes, clusters, lockedDrivers]);
+
+    const assignableDrivers = useMemo(
+        () => assignedDriverSummaries.filter(item => !item.isLocked),
+        [assignedDriverSummaries]
+    );
+
+    const handleConfirmDispatch = () => {
+        if (assignableDrivers.length === 0) {
+            toast({ variant: "destructive", title: "Sin asignaciones", description: "No hay rutas nuevas para confirmar." });
+            return;
+        }
+
+        startTransition(async () => {
+            const assignmentsPayload = assignableDrivers.map(item => ({
+                driverId: item.driver.id,
+                driverName: item.driver.name,
+                orderIds: item.route.orders.map(order => order.id),
+                distance: item.route.distance,
+                duration: item.route.duration,
+            }));
+
+            const result = await confirmRouteAssignmentsAction(timeSlot, assignmentsPayload);
+            if (result?.message?.includes('confirmadas')) {
+                setLockedDrivers(prev => {
+                    const updated = { ...prev };
+                    assignableDrivers.forEach(item => {
+                        updated[item.driver.id] = true;
+                    });
+                    return updated;
+                });
+                toast({ title: "Rutas confirmadas", description: "Se guardaron las asignaciones." });
+            } else {
+                toast({ variant: "destructive", title: "Error", description: result?.message || "No se pudieron confirmar las rutas." });
+            }
+            setIsConfirmOpen(false);
+        });
     };
 
     
@@ -391,11 +586,23 @@ export default function RoutesPage() {
                 <section className="flex-1 bg-background dark:bg-navy-dark/40 p-6 overflow-x-auto custom-scrollbar flex gap-6">
                     {isPending && Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-full min-w-[320px] rounded-2xl" />)}
                     
-                    {!isPending && displayedStaff.map(driver => {
-                       const assignedClusterIndex = assignedRoutes[driver.id];
-                       const route = assignedClusterIndex !== undefined ? clusters[assignedClusterIndex] : null;
-                       return <DriverColumn key={driver.id} driver={driver} route={route} clusterIndex={assignedClusterIndex} onUnassign={handleUnassign} onRemove={handleRemoveDriver} activeCluster={activeCluster} />
-                    })}
+                          {!isPending && displayedStaff.map(driver => {
+                              const assignedClusterIndex = assignedRoutes[driver.id];
+                              const route = assignedClusterIndex !== undefined ? clusters[assignedClusterIndex] : null;
+                              return (
+                                     <DriverColumn
+                                          key={driver.id}
+                                          driver={driver}
+                                          route={route}
+                                          clusterIndex={assignedClusterIndex}
+                                          onUnassign={handleUnassign}
+                                          onRemove={handleRemoveDriver}
+                                          activeCluster={activeCluster}
+                                          isLocked={!!lockedDrivers[driver.id]}
+                                    onViewDetails={handleViewDetails}
+                                     />
+                              );
+                          })}
                     
                     {!isPending && (
                          <div onClick={() => setIsAddDriverOpen(true)} className="min-w-[320px] flex items-center justify-center border-2 border-dashed border-border dark:border-slate-700 rounded-2xl bg-card/30 hover:bg-card/50 dark:hover:border-slate-600 transition-all cursor-pointer group">
@@ -431,10 +638,18 @@ export default function RoutesPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" className="px-6 py-2.5 rounded-xl border-slate-200 dark:border-slate-700 text-sm font-bold text-secondary-text hover:bg-slate-800 hover:text-white transition-all">
+                    <Button
+                        variant="outline"
+                        onClick={() => setIsRecalcConfirmOpen(true)}
+                        className="px-6 py-2.5 rounded-xl border-slate-200 dark:border-slate-700 text-sm font-bold text-secondary-text hover:bg-slate-800 hover:text-white transition-all"
+                        disabled={isPending || isRecalculating}
+                    >
                         Re-calcular Rutas
                     </Button>
-                    <Button className="px-8 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold shadow-blue-glow hover:bg-blue-500 transition-all flex items-center gap-2">
+                    <Button
+                        onClick={() => setIsConfirmOpen(true)}
+                        className="px-8 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold shadow-blue-glow hover:bg-blue-500 transition-all flex items-center gap-2"
+                    >
                         <span className="material-symbols-outlined text-xl">local_shipping</span>
                         Confirmar y Despachar
                     </Button>
@@ -451,6 +666,125 @@ export default function RoutesPage() {
             displayedDrivers={displayedStaff}
             onAddDrivers={handleAddDrivers}
         />
+        <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Detalle de ruta confirmada</DialogTitle>
+                    <DialogDescription>
+                        {detailData ? `Repartidor: ${detailData.driver.name} · Bloque #${detailData.clusterIndex + 1}` : 'Sin detalles'}
+                    </DialogDescription>
+                </DialogHeader>
+                {detailData && (
+                    <div className="mt-2 space-y-3 max-h-[420px] overflow-y-auto pr-2">
+                        {detailData.route.orders.map(order => (
+                            <div key={order.id} className="rounded-lg border border-border p-3">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm font-semibold text-foreground">{order.orderNumber} · {order.recipientName}</p>
+                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                        {order.priority}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">{order.address}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
+        <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar y despachar rutas</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Se guardarán las asignaciones de los repartidores con ruta. Una vez confirmadas no podrán desasignarse.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="mt-4 space-y-3">
+                    {assignedDriverSummaries.length === 0 && (
+                        <div className="text-sm text-muted-foreground">No hay rutas asignadas.</div>
+                    )}
+                    {assignedDriverSummaries.map(item => (
+                        <div key={item.driver.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                            <div>
+                                <p className="text-sm font-semibold text-foreground">{item.driver.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Bloque #{item.clusterIndex + 1} · {item.route.orders.length} pedidos · {(item.route.distance / 1000).toFixed(1)} km
+                                </p>
+                            </div>
+                            <span className={cn("text-[10px] font-bold uppercase tracking-wider", item.isLocked ? "text-emerald-400" : "text-blue-400")}
+                            >
+                                {item.isLocked ? 'Confirmada' : 'Pendiente'}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+                <div className="mt-6 border-t border-border pt-4">
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={(event) => {
+                            event.preventDefault();
+                            handleConfirmDispatch();
+                        }}
+                        className="bg-blue-600 hover:bg-blue-500"
+                        disabled={assignableDrivers.length === 0}
+                    >
+                        Confirmar y despachar
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </div>
+            </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={isRecalcConfirmOpen} onOpenChange={setIsRecalcConfirmOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Recalcular zonas</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Se recalcularán las zonas para pedidos nuevos o sin zonificar. Esto no genera rutas y mantiene la zonificación actual.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="mt-6 border-t border-border pt-4">
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(event) => {
+                                event.preventDefault();
+                                setIsRecalculating(true);
+                                startTransition(async () => {
+                                    try {
+                                        const res = await fetch('/api/recalculate-zones', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ radiusKm: 2 })
+                                        });
+                                        const data = await res.json().catch(() => ({}));
+                                        if (!res.ok) {
+                                            toast({
+                                                variant: "destructive",
+                                                title: "Error",
+                                                description: data.detail || "No se pudieron recalcular las zonas."
+                                            });
+                                            return;
+                                        }
+                                        toast({
+                                            title: "Zonas recalculadas",
+                                            description: `Actualizadas: ${data.updatedOrders ?? 0} pedidos · Nuevas zonas: ${data.createdZones ?? 0}.`
+                                        });
+                                    } finally {
+                                        setIsRecalculating(false);
+                                        setIsRecalcConfirmOpen(false);
+                                    }
+                                });
+                            }}
+                            className="bg-blue-600 hover:bg-blue-500"
+                            disabled={isRecalculating}
+                        >
+                            {isRecalculating ? 'Recalculando...' : 'Confirmar'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </div>
+            </AlertDialogContent>
+        </AlertDialog>
        </DndContext>
     );
 }

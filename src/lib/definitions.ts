@@ -65,6 +65,18 @@ export type ClusteredRoute = {
   duration: string;
 };
 
+export type RouteAssignment = {
+  id: string;
+  driverId: string;
+  driverName: string;
+  timeSlot: 'morning' | 'afternoon' | 'evening';
+  orderIds: string[];
+  distance: number;
+  duration: string;
+  createdAt: string;
+  locked: boolean;
+};
+
 export const staffMemberSchema = z.object({
   id: z.string().optional(),
   firstName: z.string().min(1, "El nombre es obligatorio"),

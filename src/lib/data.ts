@@ -1,11 +1,12 @@
-import type { Order, StaffMember } from './definitions';
+import type { Order, StaffMember, RouteAssignment } from './definitions';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:9002';
 
 // --- ORDERS ---
 
 export async function getOrders(): Promise<Order[]> {
   try {
+    console.log(`${API_URL}/orders?_sort=createdAt&_order=desc`);
     const res = await fetch(`${API_URL}/orders?_sort=createdAt&_order=desc`);
     if (!res.ok) throw new Error('Failed to fetch orders');
     const orders = await res.json();
@@ -160,4 +161,32 @@ export async function updateMultipleOrdersStatus(orderIds: string[], status: Ord
         console.error("updateMultipleOrdersStatus error:", error);
         // We can decide if we want to throw or just log
     }
+}
+
+// --- ROUTE ASSIGNMENTS ---
+export async function getRouteAssignments(timeSlot?: RouteAssignment['timeSlot']): Promise<RouteAssignment[]> {
+    try {
+        const url = timeSlot ? `${API_URL}/routeAssignments?timeSlot=${timeSlot}` : `${API_URL}/routeAssignments`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Failed to fetch route assignments');
+        return await res.json();
+    } catch (error) {
+        console.error("getRouteAssignments error:", error);
+        return [];
+    }
+}
+
+export async function addRouteAssignments(assignments: Omit<RouteAssignment, 'id'>[]): Promise<RouteAssignment[]> {
+    const created = await Promise.all(
+        assignments.map(async assignment => {
+            const res = await fetch(`${API_URL}/routeAssignments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(assignment),
+            });
+            if (!res.ok) throw new Error('Failed to add route assignment');
+            return res.json();
+        })
+    );
+    return created as RouteAssignment[];
 }
