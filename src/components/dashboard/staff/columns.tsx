@@ -5,7 +5,6 @@ import { format } from "date-fns";
 import { useState, useEffect } from "react";
 
 import type { StaffMember } from "@/lib/definitions";
-import { StaffDataTableRowActions } from "./row-actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -89,9 +88,5 @@ export const columns: ColumnDef<StaffMember>[] = [
   {
     accessorKey: "shift",
     header: "Turno"
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => <StaffDataTableRowActions row={row} />,
   },
 ];

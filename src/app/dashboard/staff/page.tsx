@@ -1,9 +1,10 @@
 import { getStaff } from "@/lib/data";
-import { StaffDataTable } from "@/components/dashboard/staff/data-table";
 import { columns } from "@/components/dashboard/staff/columns";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { StaffFormDialog } from "@/components/dashboard/staff/staff-form-dialog";
+import { StaffActions } from "@/components/dashboard/staff/staff-actions";
+import { StaffTableClient } from "@/components/dashboard/staff/staff-table-client";
+
+export const dynamic = "force-dynamic";
 
 async function StatCard({ title, value, change, icon, changeColor, iconBg, iconColor, subtext }: {
     title: string;
@@ -53,16 +54,7 @@ export default async function StaffPage() {
                 Sincronizado: hace 5 minutos
             </p>
         </div>
-        <div className="flex gap-2">
-            <Button variant="outline" className="bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 shadow-sm font-bold">
-                <span className="material-symbols-outlined text-lg">download</span> Exportar
-            </Button>
-            <StaffFormDialog>
-                <Button variant="default" className="bg-primary text-primary-foreground shadow-md font-bold">
-                    <span className="material-symbols-outlined text-lg">person_add</span> Nuevo Personal
-                </Button>
-            </StaffFormDialog>
-        </div>
+        <StaffActions />
       </div>
 
        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -101,11 +93,7 @@ export default async function StaffPage() {
             />
         </div>
 
-      <div
-        className="bg-card rounded-lg border shadow-sm overflow-hidden"
-      >
-        <StaffDataTable columns={columns} data={staff} />
-      </div>
+            <StaffTableClient />
 
       <div className="bg-card border-l-4 border-primary p-4 rounded shadow-sm flex items-start gap-4">
             <span className="material-symbols-outlined text-primary dark:text-slate-300">info</span>

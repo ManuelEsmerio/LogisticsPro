@@ -81,10 +81,19 @@ export const staffMemberSchema = z.object({
   id: z.string().optional(),
   firstName: z.string().min(1, "El nombre es obligatorio"),
   lastName: z.string().min(1, "El apellido es obligatorio"),
-  email: z.string().email({ message: "Debe ser un correo electrónico válido." }),
+  email: z.string().email({ message: "Debe ser un correo electrónico válido." }).optional().or(z.literal("")),
   phone: z.string().min(1, "El teléfono es obligatorio."),
   role: z.enum(['Repartidor', 'Administrador', 'Florista Senior', 'Gerente']),
-  vehicleType: z.enum(['ninguno', 'furgoneta', 'moto', 'bici']),
+  vehicleType: z.enum([
+    'ninguno',
+    'furgoneta',
+    'moto',
+    'bici',
+    'camioneta_empresa',
+    'carro_empresa',
+    'camioneta_propia',
+    'carro_propio',
+  ]),
   licenseNumber: z.string().optional(),
   shift: z.string().min(1, "El horario es obligatorio"),
   avatarUrl: z.string().optional(),
@@ -96,13 +105,21 @@ export type StaffMemberFormValues = z.infer<typeof staffMemberSchema>;
 export type StaffMember = {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   role: 'Repartidor' | 'Administrador' | 'Florista Senior' | 'Gerente';
   status: 'Activo' | 'Inactivo';
   shift: string;
   avatarUrl: string;
   createdAt: Date;
   phone: string;
-  vehicleType: 'ninguno' | 'furgoneta' | 'moto' | 'bici';
+  vehicleType:
+    | 'ninguno'
+    | 'furgoneta'
+    | 'moto'
+    | 'bici'
+    | 'camioneta_empresa'
+    | 'carro_empresa'
+    | 'camioneta_propia'
+    | 'carro_propio';
   licenseNumber?: string;
 };

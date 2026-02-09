@@ -22,15 +22,24 @@ import { DataTablePagination } from "@/components/dashboard/data-table/data-tabl
 import type { StaffMember } from "@/lib/definitions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  isLoading?: boolean;
+  loadingText?: string;
+  selectedId?: string | null;
+  onRowClick?: (row: TData) => void;
 }
 
 export function StaffDataTable<TData extends StaffMember, TValue>({
   columns,
   data,
+  isLoading = false,
+  loadingText = "Cargando...",
+  selectedId,
+  onRowClick,
 }: DataTableProps<TData, TValue>) {
     const [globalFilter, setGlobalFilter] = React.useState('')
     const table = useReactTable({
@@ -88,12 +97,22 @@ export function StaffDataTable<TData extends StaffMember, TValue>({
             ))}
           </TableHeader>
           <TableBody className="divide-y divide-border">
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center text-sm text-muted-foreground">
+                  {loadingText}
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                  className={cn(
+                    "hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer",
+                    selectedId && row.original.id === selectedId ? "bg-slate-50 dark:bg-slate-700/40" : ""
+                  )}
+                  onClick={() => onRowClick?.(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="px-6 py-4">

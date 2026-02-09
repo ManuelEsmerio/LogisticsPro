@@ -1,6 +1,5 @@
 import { getOrders } from "@/lib/data";
-import { DataTable } from "@/components/dashboard/data-table/data-table";
-import { columns } from "@/components/dashboard/data-table/columns";
+import { OrdersTableClient } from "@/components/dashboard/orders-table-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Suspense } from "react";
@@ -100,8 +99,6 @@ function StatsSkeleton() {
 
 
 export default async function DashboardPage() {
-  const orders = await getOrders();
-
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -125,11 +122,7 @@ export default async function DashboardPage() {
         <Stats />
       </Suspense>
 
-      <div
-        className="bg-card rounded-lg border shadow-sm overflow-hidden"
-      >
-        <DataTable columns={columns} data={orders} />
-      </div>
+            <OrdersTableClient />
        <div className="bg-card border-l-4 border-primary p-4 rounded shadow-sm flex items-start gap-4">
             <span className="material-symbols-outlined text-primary dark:text-slate-300">gavel</span>
             <div className="text-sm">

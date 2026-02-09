@@ -9,13 +9,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { confirmRouteAssignmentsAction, getClusteredRoutesAction, getRouteAssignmentsAction, updateOrdersStatus } from '@/lib/actions';
+import { confirmRouteAssignmentsAction, getClusteredRoutesAction, getRouteAssignmentsAction, recalculateRoutesAction, updateOrdersStatus } from '@/lib/actions';
 import type { ClusteredRoute, Order, RouteAssignment, StaffMember } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { DndContext, useDraggable, useDroppable, DragOverlay, closestCenter, UniqueIdentifier } from '@dnd-kit/core';
+import { DndContext, useDraggable, useDroppable, DragOverlay, closestCenter, UniqueIdentifier, PointerSensor, useSensor, useSensors, pointerWithin, type CollisionDetection, MeasuringStrategy } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { AddDriverDialog } from '@/components/dashboard/routes/add-driver-dialog';
 import {
@@ -51,7 +51,17 @@ function sameOrderSet(left: string[], right: string[]) {
     return left.every(id => rightSet.has(id));
 }
 
-function UnassignedRouteCard({ route, clusterIndex, isOverlay = false }: { route: ClusteredRoute; clusterIndex: number; isOverlay?: boolean }) {
+function UnassignedRouteCard({
+    route,
+    clusterIndex,
+    isOverlay = false,
+    onViewDetails
+}: {
+    route: ClusteredRoute;
+    clusterIndex: number;
+    isOverlay?: boolean;
+    onViewDetails?: () => void;
+}) {
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: `cluster-${clusterIndex}`,
         data: { route, clusterIndex, type: 'cluster' }
@@ -76,7 +86,23 @@ function UnassignedRouteCard({ route, clusterIndex, isOverlay = false }: { route
                     <span className={cn("text-[10px] font-bold uppercase tracking-wider", config.text)}>{config.name}</span>
                     <h3 className="text-sm font-bold text-foreground">Bloque #{clusterIndex + 1}</h3>
                 </div>
-                <span className="material-symbols-outlined text-slate-400 dark:text-slate-600 cursor-grab active:cursor-grabbing">drag_indicator</span>
+                <div className="flex items-center gap-2">
+                    {onViewDetails && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                onViewDetails();
+                            }}
+                            className="h-7 px-2 text-[10px] font-bold"
+                        >
+                            Ver detalle
+                        </Button>
+                    )}
+                    <span className="material-symbols-outlined text-slate-400 dark:text-slate-600 cursor-grab active:cursor-grabbing">drag_indicator</span>
+                </div>
             </div>
             <div className="grid grid-cols-2 gap-2 mt-3">
                 <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -270,9 +296,21 @@ export default function RoutesPage() {
     const [isAddDriverOpen, setIsAddDriverOpen] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
-    const [detailData, setDetailData] = useState<{ driver: StaffMember; route: ClusteredRoute; clusterIndex: number } | null>(null);
+    const [detailData, setDetailData] = useState<{ driver?: StaffMember | null; route: ClusteredRoute; clusterIndex: number } | null>(null);
     const [isRecalcConfirmOpen, setIsRecalcConfirmOpen] = useState(false);
     const [isRecalculating, setIsRecalculating] = useState(false);
+    const [isRegrouping, setIsRegrouping] = useState(false);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: { distance: 8 }
+        })
+    );
+
+    const collisionDetection: CollisionDetection = (args) => {
+        const pointer = pointerWithin(args);
+        return pointer.length > 0 ? pointer : closestCenter(args);
+    };
 
 
     const activeCluster = useMemo(() => {
@@ -285,7 +323,8 @@ export default function RoutesPage() {
       return null;
     }, [activeId, clusters]);
 
-    const unassignedDropRef = useDroppable({ id: 'unassigned' });
+    const unassignedDropRef = useDroppable({ id: 'unassigned', data: { type: 'unassigned' } });
+    const unassignedListRef = useDroppable({ id: 'unassigned-list', data: { type: 'unassigned' } });
 
 
     useEffect(() => {
@@ -312,8 +351,18 @@ export default function RoutesPage() {
         const ordersInRoute = clusters[draggedClusterIndex]?.orders.map(o => o.id);
         if (!ordersInRoute) return;
 
-        // Case 1: Dropped over the unassigned area
-        if (over.id === 'unassigned') {
+        const assignedIndices = new Set(Object.values(assignedRoutes));
+        const overIsUnassignedCard = typeof over.id === 'string'
+            && over.id.startsWith('cluster-')
+            && !isNaN(Number(over.id.split('-')[1]))
+            && !assignedIndices.has(Number(over.id.split('-')[1]));
+        const isUnassignedDrop = over.id === 'unassigned'
+            || over.id === 'unassigned-list'
+            || over.data.current?.type === 'unassigned'
+            || overIsUnassignedCard;
+
+        // Case 1: Dropped over the unassigned area or a card inside it
+        if (isUnassignedDrop) {
             const sourceDriverId = Object.keys(assignedRoutes).find(key => assignedRoutes[key] === draggedClusterIndex);
             if (sourceDriverId) {
                 if (lockedDrivers[sourceDriverId]) {
@@ -473,7 +522,7 @@ export default function RoutesPage() {
         setIsAddDriverOpen(false);
     };
 
-    const handleViewDetails = (driver: StaffMember, route: ClusteredRoute, clusterIndex: number) => {
+    const handleViewDetails = (driver: StaffMember | null, route: ClusteredRoute, clusterIndex: number) => {
         setDetailData({ driver, route, clusterIndex });
         setIsDetailOpen(true);
     };
@@ -532,13 +581,37 @@ export default function RoutesPage() {
         });
     };
 
+    const handleRegroupRoutes = () => {
+        setIsRegrouping(true);
+        startTransition(async () => {
+            try {
+                const result = await recalculateRoutesAction(timeSlot);
+                if (result && result.clusteredRoutes) {
+                    setClusters(result.clusteredRoutes);
+                    setAssignedRoutes({});
+                    setLockedDrivers({});
+                    if (result.staff && result.allStaff) {
+                        setAllStaff(result.allStaff);
+                        setDisplayedStaff(result.staff);
+                    }
+                } else {
+                    toast({ variant: "destructive", title: "Error", description: result.error || "No se pudieron reagrupar las rutas." });
+                }
+            } finally {
+                setIsRegrouping(false);
+            }
+        });
+    };
+
     
     return (
-       <DndContext 
+                <DndContext 
+                    sensors={sensors}
             onDragStart={(event) => setActiveId(event.active.id)}
             onDragEnd={handleDragEnd}
             onDragCancel={() => setActiveId(null)}
-            collisionDetection={closestCenter}
+                    collisionDetection={collisionDetection}
+                    measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
         >
         <div className="flex flex-col flex-1 overflow-hidden">
             <div className="px-8 py-6 flex flex-col gap-4 bg-background border-b border-border shrink-0">
@@ -575,9 +648,21 @@ export default function RoutesPage() {
                             <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unassignedClusters.length} BLOQUES</span>
                         </div>
                     </div>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+                    <div ref={unassignedListRef.setNodeRef} className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+                        {unassignedDropRef.isOver && activeCluster && (
+                            <div className="rounded-xl border-2 border-dashed border-primary/60 bg-primary/5 px-4 py-3 text-center text-sm font-semibold text-primary">
+                                Soltar aqui para desasignar Bloque #{activeCluster.index + 1}
+                            </div>
+                        )}
                         {isPending && Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}
-                        {!isPending && unassignedClusters.map(({ cluster, index }) => <UnassignedRouteCard key={index} route={cluster} clusterIndex={index} />)}
+                        {!isPending && unassignedClusters.map(({ cluster, index }) => (
+                            <UnassignedRouteCard
+                                key={index}
+                                route={cluster}
+                                clusterIndex={index}
+                                onViewDetails={() => handleViewDetails(null, cluster, index)}
+                            />
+                        ))}
                          {!isPending && unassignedClusters.length === 0 && (
                             <div className="text-center text-muted-foreground text-sm py-10">No hay rutas sin asignar.</div>
                         )}
@@ -640,6 +725,14 @@ export default function RoutesPage() {
                 <div className="flex items-center gap-3">
                     <Button
                         variant="outline"
+                        onClick={handleRegroupRoutes}
+                        className="px-6 py-2.5 rounded-xl border-slate-200 dark:border-slate-700 text-sm font-bold text-secondary-text hover:bg-slate-800 hover:text-white transition-all"
+                        disabled={isPending || isRegrouping}
+                    >
+                        {isRegrouping ? 'Reagrupando...' : 'Reagrupar Rutas'}
+                    </Button>
+                    <Button
+                        variant="outline"
                         onClick={() => setIsRecalcConfirmOpen(true)}
                         className="px-6 py-2.5 rounded-xl border-slate-200 dark:border-slate-700 text-sm font-bold text-secondary-text hover:bg-slate-800 hover:text-white transition-all"
                         disabled={isPending || isRecalculating}
@@ -671,7 +764,9 @@ export default function RoutesPage() {
                 <DialogHeader>
                     <DialogTitle>Detalle de ruta confirmada</DialogTitle>
                     <DialogDescription>
-                        {detailData ? `Repartidor: ${detailData.driver.name} · Bloque #${detailData.clusterIndex + 1}` : 'Sin detalles'}
+                        {detailData
+                            ? `${detailData.driver ? `Repartidor: ${detailData.driver.name} · ` : 'Sin asignar · '}Bloque #${detailData.clusterIndex + 1}`
+                            : 'Sin detalles'}
                     </DialogDescription>
                 </DialogHeader>
                 {detailData && (

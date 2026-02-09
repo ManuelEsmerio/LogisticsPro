@@ -1,12 +1,12 @@
 "use client";
 
 import { ColumnDef, Row } from "@tanstack/react-table";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 import type { Order } from "@/lib/definitions";
-import { DataTableRowActions } from "./data-table-row-actions";
+import { parseDeliveryTime } from "@/lib/data";
 
 const PaymentStatusCell = ({ row }: { row: Row<Order> }) => {
   const status: Order['paymentStatus'] = row.getValue("paymentStatus");
@@ -78,6 +78,14 @@ const DeliveryTimeCell = ({ row }: { row: Row<Order> }) => {
   return <span className="text-muted-foreground">N/A</span>;
 };
 
+const DeliveryDateCell = ({ row }: { row: Row<Order> }) => {
+  const deliveryTime = parseDeliveryTime(row.original.deliveryTime);
+  if (!deliveryTime || !isValid(deliveryTime)) {
+    return <span className="text-muted-foreground">Sin fecha</span>;
+  }
+  return <span className="font-medium">{format(new Date(deliveryTime), "dd/MM/yyyy")}</span>;
+};
+
 
 export const columns: ColumnDef<Order>[] = [
   {
@@ -106,6 +114,11 @@ export const columns: ColumnDef<Order>[] = [
     )
   },
   {
+    accessorKey: "deliveryTime",
+    header: "Fecha de Envío",
+    cell: DeliveryDateCell,
+  },
+  {
     accessorKey: "deliveryTimeSlot",
     header: "Ventana de Entrega",
     cell: DeliveryTimeCell
@@ -119,9 +132,5 @@ export const columns: ColumnDef<Order>[] = [
     accessorKey: "priority",
     header: "Prioridad",
     cell: PriorityCell,
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => <DataTableRowActions row={row} />,
   },
 ];

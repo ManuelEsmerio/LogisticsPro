@@ -7,94 +7,137 @@ import { addOrder, deleteOrder, getOrders, updateOrder, addStaff, updateStaff, d
 import { orderSchema, staffMemberSchema, type Order, type OrderFormValues, type StaffMember, type StaffMemberFormValues, type RouteAssignment, Waypoint } from "@/lib/definitions";
 import { DBSCAN } from 'density-clustering';
 
-// --- Real Geocoding with Google Maps API ---
+const GEO_CACHE_TTL_MS = Number(process.env.GEO_CACHE_TTL_MS ?? String(7 * 24 * 60 * 60 * 1000));
+const GEO_CACHE_MAX = Number(process.env.GEO_CACHE_MAX ?? '5000');
+const geoCache = new Map<string, { latitude: number; longitude: number; ts: number }>();
+
+function normalizeAddress(address: string) {
+    return address.trim().toLowerCase();
+}
+
+function getCachedGeocode(address: string) {
+    const key = normalizeAddress(address);
+    const entry = geoCache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.ts > GEO_CACHE_TTL_MS) {
+        geoCache.delete(key);
+        return null;
+    }
+    return { latitude: entry.latitude, longitude: entry.longitude };
+}
+
+function setCachedGeocode(address: string, coords: { latitude: number; longitude: number }) {
+    const key = normalizeAddress(address);
+    if (geoCache.size >= GEO_CACHE_MAX) {
+        const firstKey = geoCache.keys().next().value;
+        if (firstKey) geoCache.delete(firstKey);
+    }
+    geoCache.set(key, { ...coords, ts: Date.now() });
+}
+
+// --- Real Geocoding with OpenRouteService ---
 async function geocodeAddress(address: string): Promise<{ latitude: number; longitude: number }> {
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.OPENROUTE_API_KEY;
     const fallbackCoordinates = { latitude: 20.8833, longitude: -103.8360 };
 
+    const cached = getCachedGeocode(address);
+    if (cached) return cached;
+
     if (!apiKey) {
-        console.warn("GOOGLE_MAPS_API_KEY is not set. Using fallback coordinates.");
+        console.warn("OPENROUTE_API_KEY is not set. Using fallback coordinates.");
         return fallbackCoordinates;
     }
 
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
-
     try {
-        const response = await fetch(url);
-        const data = await response.json();
+        const url = new URL("https://api.openrouteservice.org/geocode/search");
+        url.searchParams.set("api_key", apiKey);
+        url.searchParams.set("text", address);
+        url.searchParams.set("boundary.country", "MEX");
+        url.searchParams.set("size", "1");
 
-        if (data.status === 'OK' && data.results[0]) {
-            const location = data.results[0].geometry.location;
-            return {
-                latitude: location.lat,
-                longitude: location.lng,
-            };
-        } else {
-            console.error('Geocoding failed:', data.status, data.error_message);
+        const response = await fetch(url.toString());
+
+        if (!response.ok) {
+            console.error("Geocoding failed:", response.status, response.statusText);
             return fallbackCoordinates;
         }
+
+        const data = await response.json();
+        const coords = data?.features?.[0]?.geometry?.coordinates;
+        if (!Array.isArray(coords) || coords.length < 2) {
+            console.error("Geocoding failed: empty response");
+            return fallbackCoordinates;
+        }
+
+        const [longitude, latitude] = coords;
+        const result = { latitude, longitude };
+        setCachedGeocode(address, result);
+        return result;
     } catch (error) {
-        console.error('Error fetching from Geocoding API:', error);
+        console.error("Error fetching from OpenRouteService Geocoding:", error);
         return fallbackCoordinates;
     }
 }
 
 async function optimizeRoute(waypoints: Waypoint[]) {
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.OPENROUTE_API_KEY;
     if (!apiKey || waypoints.length === 0) {
         return { orderedWaypoints: waypoints, distance: 0, duration: '0s' };
     }
 
-    const API_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
-
-    const origin = waypoints[0];
-    const intermediates = waypoints.slice(1);
-
-    const requestBody = {
-        origin: { location: { latLng: { latitude: origin.latitude, longitude: origin.longitude } } },
-        destination: { location: { latLng: { latitude: origin.latitude, longitude: origin.longitude } } },
-        intermediates: intermediates.map(wp => ({
-            location: { latLng: { latitude: wp.latitude, longitude: wp.longitude } }
-        })),
-        travelMode: 'DRIVE',
-        routingPreference: 'TRAFFIC_AWARE',
-        optimizeWaypointOrder: true,
-    };
-
     try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
+        if (waypoints.length === 1) {
+            return { orderedWaypoints: waypoints, distance: 0, duration: '0s' };
+        }
+
+        const origin = waypoints[0];
+        const intermediates = waypoints.slice(1);
+        const jobs = intermediates.map((wp, index) => ({
+            id: index + 1,
+            location: [wp.longitude, wp.latitude],
+        }));
+
+        const requestBody = {
+            jobs,
+            vehicles: [
+                {
+                    id: 1,
+                    profile: "driving-car",
+                    start: [origin.longitude, origin.latitude],
+                    end: [origin.longitude, origin.latitude],
+                },
+            ],
+        };
+
+        const response = await fetch("https://api.openrouteservice.org/optimization", {
+            method: "POST",
             headers: {
-                'Content-Type': 'application/json',
-                'X-Goog-Api-Key': apiKey,
-                'X-Goog-FieldMask': 'routes.optimizedIntermediateWaypointIndex,routes.distanceMeters,routes.duration'
+                "Content-Type": "application/json",
+                Authorization: apiKey,
             },
             body: JSON.stringify(requestBody),
         });
 
-        const data = await response.json();
-
-        if (!data.routes || data.routes.length === 0) {
+        if (!response.ok) {
+            console.error("Optimization failed:", response.status, response.statusText);
             return { orderedWaypoints: waypoints, distance: 0, duration: '0s' };
         }
-        
-        const route = data.routes[0];
-        const distance = route.distanceMeters || 0;
-        const duration = route.duration || '0s';
 
+        const data = await response.json();
+        const route = data?.routes?.[0];
+        const steps = Array.isArray(route?.steps) ? route.steps : [];
+        const orderedIntermediates = steps
+            .filter((step: { type?: string }) => step?.type === "job")
+            .map((step: { job: number }) => intermediates[(step.job ?? 1) - 1])
+            .filter(Boolean);
 
-        if (route.optimizedIntermediateWaypointIndex) {
-            const optimizedIndices = route.optimizedIntermediateWaypointIndex;
-            const orderedWaypoints = [origin];
-            optimizedIndices.forEach((index: number) => {
-                orderedWaypoints.push(intermediates[index]);
-            });
-            return { orderedWaypoints, distance, duration };
-        }
-        // If optimization fails, return original order
-        return { orderedWaypoints: waypoints, distance, duration };
+        const orderedWaypoints = [origin, ...orderedIntermediates];
+        const distance = Number.isFinite(route?.distance) ? route.distance : 0;
+        const durationSeconds = Number.isFinite(route?.duration) ? route.duration : 0;
+
+        return { orderedWaypoints, distance, duration: `${Math.round(durationSeconds)}s` };
     } catch (error) {
-        console.error('Error calling Routes API:', error);
+        console.error("Error calling OpenRouteService Optimization:", error);
         return { orderedWaypoints: waypoints, distance: 0, duration: '0s' }; // Fallback
     }
 }
@@ -110,12 +153,12 @@ export async function saveOrder(data: OrderFormValues) {
     };
   }
   
-  const { id, deliveryTimeType, ...orderData } = validatedFields.data;
+    const { id, deliveryTimeType, ...orderData } = validatedFields.data;
 
   // Ensure nullable fields are handled correctly
   const finalOrderData = {
       ...orderData,
-      deliveryTime: deliveryTimeType === 'exact_time' ? orderData.deliveryTime : null,
+      deliveryTime: orderData.deliveryTime,
       deliveryTimeSlot: deliveryTimeType === 'timeslot' ? orderData.deliveryTimeSlot : null,
   };
 
@@ -123,11 +166,14 @@ export async function saveOrder(data: OrderFormValues) {
   const { latitude, longitude } = await geocodeAddress(finalOrderData.address);
 
   try {
-    if (id) {
-      await updateOrder(id, { ...finalOrderData, latitude, longitude });
-    } else {
-      await addOrder({ ...finalOrderData, latitude, longitude });
-    }
+        if (id) {
+            const updated = await updateOrder(id, { ...finalOrderData, latitude, longitude });
+            if (!updated) {
+                    throw new Error("Update failed");
+            }
+        } else {
+            await addOrder({ ...finalOrderData, latitude, longitude });
+        }
   } catch (error) {
     return { message: "Error de base de datos: No se pudo guardar el pedido." };
   }
@@ -150,6 +196,10 @@ export async function deleteOrderAction(id: string) {
 
 export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon' | 'evening') {
     try {
+    const epsilon = Number(process.env.ROUTE_CLUSTER_EPSILON ?? '0.005');
+    const minPoints = Number(process.env.ROUTE_CLUSTER_MIN_POINTS ?? '1');
+    const clusterEpsilon = Number.isFinite(epsilon) ? epsilon : 0.005;
+    const clusterMinPoints = Number.isFinite(minPoints) ? minPoints : 1;
         const allOrders = await getOrders();
         const deliveryOrders = allOrders
             .filter(order =>
@@ -169,7 +219,7 @@ export async function getClusteredRoutesAction(timeSlot: 'morning' | 'afternoon'
         const dataset = deliveryOrders.map(order => [order.latitude, order.longitude]);
         
         const scanner = new DBSCAN();
-        const clustersIndices = scanner.run(dataset, 0.01, 2);
+        const clustersIndices = scanner.run(dataset, clusterEpsilon, clusterMinPoints);
 
 
         const clusteredRoutesPromises = clustersIndices.map(async (clusterOrderIndices: number[]) => {
@@ -218,6 +268,8 @@ export async function recalculateRoutesAction(timeSlot: 'morning' | 'afternoon' 
 
         await Promise.all(
             deliveryOrders.map(async order => {
+                const hasCoords = Number.isFinite(order.latitude) && Number.isFinite(order.longitude) && (order.latitude !== 0 || order.longitude !== 0);
+                if (hasCoords) return;
                 const { latitude, longitude } = await geocodeAddress(order.address);
                 await updateOrder(order.id, { latitude, longitude });
             })

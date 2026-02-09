@@ -1,6 +1,28 @@
 import type { Order, StaffMember, RouteAssignment } from './definitions';
+import { format, parse, isValid } from "date-fns";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:9002';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api';
+
+export function parseDeliveryTime(value: unknown): Date | null {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    if (typeof value === "string") {
+        if (value.includes("T")) {
+            const parsed = new Date(value);
+            return isValid(parsed) ? parsed : null;
+        }
+        const parsedDMY = parse(value, "dd/MM/yyyy", new Date());
+        if (isValid(parsedDMY)) return parsedDMY;
+        const parsedYMD = parse(value, "yyyy-MM-dd", new Date());
+        if (isValid(parsedYMD)) return parsedYMD;
+    }
+    return null;
+}
+
+function formatDeliveryTime(value: Date | null | undefined): string | null {
+    if (!value) return null;
+    return format(value, "dd/MM/yyyy");
+}
 
 // --- ORDERS ---
 
@@ -11,15 +33,29 @@ export async function getOrders(): Promise<Order[]> {
     if (!res.ok) throw new Error('Failed to fetch orders');
     const orders = await res.json();
     // Dates are strings in JSON, convert them back to Date objects
-    return orders.map((order: any) => ({
-      ...order,
-      createdAt: new Date(order.createdAt),
-      deliveryTime: order.deliveryTime ? new Date(order.deliveryTime) : null,
-    }));
+        return orders.map((order: any) => ({
+            ...order,
+            id: order.id ?? order._id,
+            createdAt: new Date(order.createdAt),
+            deliveryTime: parseDeliveryTime(order.deliveryTime),
+        }));
   } catch (error) {
     console.error("getOrders error:", error);
     return [];
   }
+}
+
+export async function getLatestOrderNumber(): Promise<string | null> {
+    try {
+        const res = await fetch(`${API_URL}/orders?_sort=createdAt&_order=desc&_limit=1`);
+        if (!res.ok) return null;
+        const orders = await res.json();
+        const latest = Array.isArray(orders) ? orders[0] : null;
+        return latest?.orderNumber ?? null;
+    } catch (error) {
+        console.error("getLatestOrderNumber error:", error);
+        return null;
+    }
 }
 
 export async function getOrderById(id: string): Promise<Order | undefined> {
@@ -29,8 +65,9 @@ export async function getOrderById(id: string): Promise<Order | undefined> {
         const order = await res.json();
         return {
             ...order,
+            id: order.id ?? order._id,
             createdAt: new Date(order.createdAt),
-            deliveryTime: order.deliveryTime ? new Date(order.deliveryTime) : null,
+            deliveryTime: parseDeliveryTime(order.deliveryTime),
         };
     } catch (error) {
         console.error(`getOrderById(${id}) error:`, error);
@@ -42,7 +79,7 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'createdAt'>): Prom
     const newOrderPayload = {
         ...orderData,
         createdAt: new Date().toISOString(),
-        deliveryTime: orderData.deliveryTime ? orderData.deliveryTime.toISOString() : null,
+        deliveryTime: formatDeliveryTime(orderData.deliveryTime),
     };
     const res = await fetch(`${API_URL}/orders`, {
         method: 'POST',
@@ -53,18 +90,20 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'createdAt'>): Prom
     const newOrder = await res.json();
     return {
         ...newOrder,
+        id: newOrder.id ?? newOrder._id,
         createdAt: new Date(newOrder.createdAt),
-        deliveryTime: newOrder.deliveryTime ? new Date(newOrder.deliveryTime) : null,
+        deliveryTime: parseDeliveryTime(newOrder.deliveryTime),
     };
 }
 
 export async function updateOrder(id: string, updates: Partial<Omit<Order, 'id' | 'createdAt'>>): Promise<Order | null> {
     const updatePayload = {
         ...updates,
-        ...(updates.deliveryTime && { deliveryTime: updates.deliveryTime.toISOString() }),
+        ...(updates.deliveryTime instanceof Date && { deliveryTime: formatDeliveryTime(updates.deliveryTime) }),
+        ...(updates.deliveryTime === null && { deliveryTime: null }),
     };
 
-    const res = await fetch(`${API_URL}/orders/${id}`, {
+    const res = await fetch(`${API_URL}/orders?_id=${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatePayload),
@@ -73,13 +112,14 @@ export async function updateOrder(id: string, updates: Partial<Omit<Order, 'id' 
     const updatedOrder = await res.json();
     return {
         ...updatedOrder,
+        id: updatedOrder.id ?? updatedOrder._id,
         createdAt: new Date(updatedOrder.createdAt),
-        deliveryTime: updatedOrder.deliveryTime ? new Date(updatedOrder.deliveryTime) : null,
+        deliveryTime: parseDeliveryTime(updatedOrder.deliveryTime),
     };
 }
 
 export async function deleteOrder(id: string): Promise<boolean> {
-    const res = await fetch(`${API_URL}/orders/${id}`, {
+    const res = await fetch(`${API_URL}/orders?_id=${id}`, {
         method: 'DELETE',
     });
     return res.ok;
@@ -90,11 +130,13 @@ export async function deleteOrder(id: string): Promise<boolean> {
 
 export async function getStaff(): Promise<StaffMember[]> {
     try {
-        const res = await fetch(`${API_URL}/staff?_sort=createdAt&_order=desc`);
+        console.log(`${API_URL}/deliveryStaff?_sort=createdAt&_order=desc`);
+        const res = await fetch(`${API_URL}/deliveryStaff?_sort=createdAt&_order=desc`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch staff');
         const staff = await res.json();
         return staff.map((s: any) => ({
             ...s,
+            id: s.id ?? s._id,
             createdAt: new Date(s.createdAt),
         }));
     } catch (error) {
@@ -103,7 +145,6 @@ export async function getStaff(): Promise<StaffMember[]> {
     }
 }
 
-
 export async function addStaff(staffData: Omit<StaffMember, 'id' | 'createdAt' | 'status'>): Promise<StaffMember> {
     const newStaffPayload = {
         ...staffData,
@@ -111,7 +152,7 @@ export async function addStaff(staffData: Omit<StaffMember, 'id' | 'createdAt' |
         avatarUrl: staffData.avatarUrl || `https://picsum.photos/seed/${Date.now()}/100/100`,
         createdAt: new Date().toISOString(),
     };
-    const res = await fetch(`${API_URL}/staff`, {
+    const res = await fetch(`${API_URL}/deliveryStaff`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newStaffPayload),
@@ -120,13 +161,14 @@ export async function addStaff(staffData: Omit<StaffMember, 'id' | 'createdAt' |
     const newStaff = await res.json();
     return {
         ...newStaff,
+        id: newStaff.id ?? newStaff._id,
         createdAt: new Date(newStaff.createdAt),
     };
 }
 
 export async function updateStaff(id: string, updates: Partial<Omit<StaffMember, 'id' | 'createdAt'>>): Promise<StaffMember | null> {
-    const res = await fetch(`${API_URL}/staff/${id}`, {
-        method: 'PATCH',
+    const res = await fetch(`${API_URL}/deliveryStaff?_id=${id}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
     });
@@ -134,12 +176,13 @@ export async function updateStaff(id: string, updates: Partial<Omit<StaffMember,
     const updatedStaff = await res.json();
     return {
         ...updatedStaff,
+        id: updatedStaff.id ?? updatedStaff._id,
         createdAt: new Date(updatedStaff.createdAt),
     };
 }
 
 export async function deleteStaff(id: string): Promise<boolean> {
-    const res = await fetch(`${API_URL}/staff/${id}`, {
+    const res = await fetch(`${API_URL}/deliveryStaff?_id=${id}`, {
         method: 'DELETE',
     });
     return res.ok;

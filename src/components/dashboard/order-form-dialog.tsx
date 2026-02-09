@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -40,10 +40,11 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 import { cn } from "@/lib/utils";
 import { orderSchema, type Order, type OrderFormValues } from "@/lib/definitions";
-import { saveOrder } from "@/lib/actions";
+import { addOrder, getLatestOrderNumber, updateOrder } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenuItem } from "../ui/dropdown-menu";
 import { ScrollArea } from "../ui/scroll-area";
@@ -53,12 +54,26 @@ interface OrderFormDialogProps {
     order?: Order;
     isEditMode?: boolean;
     children: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    showTrigger?: boolean;
 }
 
-export function OrderFormDialog({ order, isEditMode = false, children }: OrderFormDialogProps) {
+export function OrderFormDialog({ order, isEditMode = false, children, open: controlledOpen, onOpenChange, showTrigger = true }: OrderFormDialogProps) {
     const [open, setOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
+    const isControlled = controlledOpen !== undefined;
+    const dialogOpen = isControlled ? controlledOpen : open;
+    const setDialogOpen = onOpenChange ?? setOpen;
+    const [calendarOpen, setCalendarOpen] = useState(false);
+    const calendarFormatters = {
+        formatWeekdayName: (weekday: Date) => ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"][weekday.getDay()],
+        formatCaption: (month: Date) => {
+            const label = format(month, "LLLL yyyy", { locale: es });
+            return label.charAt(0).toUpperCase() + label.slice(1);
+        },
+    };
 
     const form = useForm<OrderFormValues>({
         resolver: zodResolver(orderSchema),
@@ -72,33 +87,65 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
           deliveryType: order?.deliveryType || "delivery",
           paymentStatus: order?.paymentStatus || "due",
           priority: order?.priority || "Media",
+                    deliveryTimeType: "timeslot",
           deliveryTime: order?.deliveryTime ? new Date(order.deliveryTime) : new Date(),
           deliveryTimeSlot: order?.deliveryTimeSlot || "morning",
         },
     });
 
-    const onSubmit = (data: OrderFormValues) => {
+    const onSubmit = (data: OrderFormValues, event?: React.BaseSyntheticEvent) => {
+        if (
+            event?.nativeEvent?.submitter &&
+            event.nativeEvent.submitter.getAttribute("data-submit") !== "true"
+        ) {
+            return;
+        }
         startTransition(async () => {
-             // We manually add deliveryTimeType here before saving
-            const result = await saveOrder({
-                ...data,
-                deliveryTimeType: 'timeslot' 
-            });
+            try {
+                const rawId = data.id;
+                const id = rawId && rawId !== "undefined" ? rawId : undefined;
+                const { id: _ignored, ...orderPayload } = data;
+                const shouldGeocode = !id || !order || order.address !== data.address;
+                if (shouldGeocode) {
+                    const res = await fetch("/api/geocode", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ address: data.address }),
+                    });
+                    if (!res.ok) throw new Error("Geocode failed");
+                    const coords = await res.json();
+                    orderPayload.latitude = coords.latitude;
+                    orderPayload.longitude = coords.longitude;
+                }
+                if (id) {
+                    const updated = await updateOrder(id, orderPayload);
+                    if (!updated) throw new Error("Failed to update order");
+                } else {
+                    await addOrder({
+                        ...orderPayload,
+                        latitude: orderPayload.latitude ?? 0,
+                        longitude: orderPayload.longitude ?? 0,
+                    });
+                }
 
-            if (result.errors) {
-                // Handle validation errors if necessary
-            } else {
                 toast({
                     title: "Éxito",
-                    description: result.message,
+                    description: `Pedido ${data.id ? "actualizado" : "creado"} con éxito.`,
                 });
-                setOpen(false);
+                setDialogOpen(false);
                 form.reset();
+                window.dispatchEvent(new Event("orders:updated"));
+            } catch (error) {
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "No se pudo guardar el pedido.",
+                });
             }
         });
     };
 
-    const trigger = isEditMode ? (
+    const trigger = !showTrigger ? null : (isEditMode ? (
         <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
             {children}
         </DropdownMenuItem>
@@ -106,12 +153,64 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
         <DialogTrigger asChild>
           {children}
         </DialogTrigger>
-    )
+    ));
+
+    useEffect(() => {
+        if (!order) {
+            form.reset({
+                id: undefined,
+                orderNumber: "#FL-001",
+                address: "",
+                recipientName: "",
+                product: "",
+                contactNumber: "",
+                deliveryType: "delivery",
+                paymentStatus: "due",
+                priority: "Media",
+                deliveryTimeType: "timeslot",
+                deliveryTime: new Date(),
+                deliveryTimeSlot: "morning",
+            });
+
+            if (dialogOpen) {
+                (async () => {
+                    const latest = await getLatestOrderNumber();
+                    const match = latest?.match(/#FL-(\d+)/i);
+                    const nextNumber = match ? Number(match[1]) + 1 : 1;
+                    const formatted = `#FL-${String(nextNumber).padStart(3, "0")}`;
+                    form.setValue("orderNumber", formatted, { shouldDirty: true });
+                })();
+            }
+            return;
+        }
+
+        form.reset({
+            id: order.id,
+            orderNumber: order.orderNumber,
+            address: order.address,
+            recipientName: order.recipientName,
+            product: order.product,
+            contactNumber: order.contactNumber,
+            deliveryType: order.deliveryType,
+            paymentStatus: order.paymentStatus,
+            priority: order.priority,
+            deliveryTimeType: "timeslot",
+            deliveryTime: order.deliveryTime ? new Date(order.deliveryTime) : new Date(),
+            deliveryTimeSlot: order.deliveryTimeSlot || "morning",
+        });
+    }, [order, form, dialogOpen]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         {trigger}
-      <DialogContent className="sm:max-w-[960px] p-0">
+    <DialogContent
+        className="sm:max-w-[960px] p-0"
+        showClose={false}
+        onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            form.setFocus("orderNumber");
+        }}
+    >
         <DialogHeader className="flex flex-row items-center justify-between px-8 py-6 border-b border-gray-100 dark:border-gray-800">
             <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-primary dark:text-gray-200 text-3xl">local_florist</span>
@@ -123,15 +222,22 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
                 </button>
             </DialogClose>
         </DialogHeader>
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <ScrollArea className="max-h-[70vh]">
+                <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col max-h-[80vh]">
+                            <ScrollArea className="flex-1">
                 <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-12">
                   <div className="flex flex-col gap-6">
                     <div className="flex flex-col gap-4">
                       <h2 className="text-primary dark:text-gray-200 text-lg font-bold flex items-center gap-2">
                         <span className="material-symbols-outlined text-sm">person</span> Datos del Cliente
                       </h2>
+                                             <FormField control={form.control} name="orderNumber" render={({ field }) => (
+                                                        <FormItem>
+                                                                <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Número de Pedido</FormLabel>
+                                                                <FormControl><Input className="h-12 px-4 text-base" placeholder="#FL-1234" {...field} /></FormControl>
+                                                                <FormMessage />
+                                                        </FormItem>
+                                                )} />
                        <FormField control={form.control} name="recipientName" render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Nombre del Cliente</FormLabel>
@@ -163,17 +269,18 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
                         <FormField control={form.control} name="product" render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Tipo de Arreglo</FormLabel>
-                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                 <Select value={field.value} onValueChange={field.onChange}>
                                     <FormControl>
                                         <SelectTrigger className="h-12 px-4 text-base">
                                             <SelectValue placeholder="Seleccione tipo de arreglo" />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        <SelectItem value="Ramo de Flores">Ramo de Flores</SelectItem>
-                                        <SelectItem value="Centro de Mesa">Centro de Mesa</SelectItem>
-                                        <SelectItem value="Caja Premium">Caja Premium</SelectItem>
-                                        <SelectItem value="Evento Especial">Evento Especial</SelectItem>
+                                        <SelectItem value="Arreglo de flores">Arreglo de flores</SelectItem>
+                                        <SelectItem value="Ramo de flores">Ramo de flores</SelectItem>
+                                        <SelectItem value="Regalo">Regalo</SelectItem>
+                                        <SelectItem value="Paquete">Paquete</SelectItem>
+                                        <SelectItem value="otros">otros</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -183,7 +290,7 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
                              <FormField control={form.control} name="deliveryTime" render={({ field }) => (
                                 <FormItem className="flex flex-col">
                                     <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Fecha de Entrega</FormLabel>
-                                    <Popover>
+                                    <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                                         <PopoverTrigger asChild>
                                             <FormControl>
                                                 <Button variant={"outline"} className={cn("h-12 px-4 text-base justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
@@ -192,8 +299,18 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
                                                 </Button>
                                             </FormControl>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} initialFocus />
+                                        <PopoverContent className="w-auto p-0" align="start" portalled={false}>
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value ?? undefined}
+                                                onSelect={(date) => {
+                                                    field.onChange(date);
+                                                    setCalendarOpen(false);
+                                                }}
+                                                initialFocus
+                                                locale={es}
+                                                formatters={calendarFormatters}
+                                            />
                                         </PopoverContent>
                                     </Popover>
                                     <FormMessage />
@@ -202,7 +319,7 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
                              <FormField control={form.control} name="deliveryTimeSlot" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Franja Horaria</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
+                                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
                                         <FormControl>
                                             <SelectTrigger className="h-12 px-4 text-base">
                                                 <SelectValue placeholder="Selecciona una franja"/>
@@ -221,7 +338,7 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
                         <FormField control={form.control} name="priority" render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Prioridad</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select value={field.value} onValueChange={field.onChange}>
                                     <FormControl>
                                         <SelectTrigger className="h-12 px-4 text-base">
                                             <SelectValue />
@@ -248,10 +365,10 @@ export function OrderFormDialog({ order, isEditMode = false, children }: OrderFo
                 </div>
               </ScrollArea>
               <DialogFooter className="px-8 py-6 bg-silk-gray dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-4">
-                  <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="px-8 py-3 rounded-full text-charcoal-gray dark:text-gray-300 font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors tracking-wide">
+                  <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)} className="px-8 py-3 rounded-full text-charcoal-gray dark:text-gray-300 font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors tracking-wide">
                       CANCELAR
                   </Button>
-                  <Button type="submit" disabled={isPending} className="px-10 py-3 rounded-full bg-primary text-white font-bold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-primary/20 tracking-wide flex items-center gap-2">
+                  <Button type="submit" data-submit="true" disabled={isPending} className="px-10 py-3 rounded-full bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 tracking-wide flex items-center gap-2">
                       {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="material-symbols-outlined text-[18px]">add_shopping_cart</span>}
                       {isEditMode ? "GUARDAR CAMBIOS" : "CREAR PEDIDO"}
                   </Button>

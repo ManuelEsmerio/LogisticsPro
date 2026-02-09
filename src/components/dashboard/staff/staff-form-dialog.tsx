@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -24,22 +24,41 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { staffMemberSchema, type StaffMember, type StaffMemberFormValues } from "@/lib/definitions";
-import { saveStaff } from "@/lib/actions";
+import { addStaff, updateStaff } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useRouter } from "next/navigation";
 
 interface StaffFormDialogProps {
     staffMember?: StaffMember;
     isEditMode?: boolean;
     children: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    triggerAsMenuItem?: boolean;
+    showTrigger?: boolean;
+    preventOutsideClose?: boolean;
 }
 
-export function StaffFormDialog({ staffMember, isEditMode = false, children }: StaffFormDialogProps) {
+export function StaffFormDialog({
+    staffMember,
+    isEditMode = false,
+    children,
+    open: controlledOpen,
+    onOpenChange,
+    triggerAsMenuItem = true,
+    showTrigger = true,
+    preventOutsideClose = false,
+}: StaffFormDialogProps) {
     const [open, setOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
+    const router = useRouter();
+    const isControlled = controlledOpen !== undefined;
+    const dialogOpen = isControlled ? controlledOpen : open;
+    const setDialogOpen = onOpenChange ?? setOpen;
 
     const form = useForm<StaffMemberFormValues>({
         resolver: zodResolver(staffMemberSchema),
@@ -57,36 +76,108 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
         },
     });
 
+    useEffect(() => {
+        if (!staffMember) {
+            form.reset({
+                id: undefined,
+                firstName: "",
+                lastName: "",
+                email: "",
+                phone: "",
+                role: undefined,
+                shift: undefined,
+                vehicleType: 'ninguno',
+                licenseNumber: "",
+                avatarUrl: "",
+            });
+            return;
+        }
+
+        form.reset({
+            id: staffMember.id,
+            firstName: staffMember.name.split(' ')[0] || "",
+            lastName: staffMember.name.split(' ').slice(1).join(' ') || "",
+            email: staffMember.email || "",
+            phone: staffMember.phone || "",
+            role: staffMember.role,
+            shift: staffMember.shift,
+            vehicleType: staffMember.vehicleType || 'ninguno',
+            licenseNumber: staffMember.licenseNumber || "",
+            avatarUrl: staffMember.avatarUrl || "",
+        });
+    }, [staffMember, form]);
+
     const onSubmit = (data: StaffMemberFormValues) => {
         startTransition(async () => {
-            const result = await saveStaff(data);
-            if (result.errors) {
-                // Handle validation errors if necessary
-            } else {
+            const validatedFields = staffMemberSchema.safeParse(data);
+            if (!validatedFields.success) {
+                return;
+            }
+
+            const { id, firstName, lastName, ...staffData } = validatedFields.data;
+            const name = `${firstName} ${lastName}`;
+            const dataToSave = { ...staffData, name };
+
+            try {
+                if (id) {
+                    const updated = await updateStaff(id, dataToSave);
+                    if (!updated) {
+                        throw new Error("Update failed");
+                    }
+                } else {
+                    const created = await addStaff(dataToSave as Omit<StaffMember, 'id' | 'createdAt' | 'status'>);
+                    if (!created) {
+                        throw new Error("Create failed");
+                    }
+                }
+
                 toast({
                     title: "Éxito",
-                    description: result.message,
+                    description: `Miembro del personal ${id ? 'actualizado' : 'creado'} con éxito.`,
                 });
-                setOpen(false);
+                setDialogOpen(false);
                 form.reset();
+                window.dispatchEvent(new Event("staff:updated"));
+                router.refresh();
+            } catch (error) {
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "No se pudo guardar el miembro del personal.",
+                });
             }
         });
     };
 
-    const trigger = isEditMode ? (
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
+    const trigger = !showTrigger ? null : (isEditMode && triggerAsMenuItem ? (
+        <DropdownMenuItem
+            onSelect={(e) => {
+                e.preventDefault();
+                setDialogOpen(true);
+            }}
+            className="cursor-pointer"
+        >
             {children}
         </DropdownMenuItem>
     ) : (
         <DialogTrigger asChild>
             {children}
         </DialogTrigger>
-    )
+    ))
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    return (
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen} modal>
         {trigger}
-      <DialogContent className="sm:max-w-[960px] p-0">
+            <DialogContent
+                className="sm:max-w-[960px] p-0"
+                showOverlay={false}
+                onOpenAutoFocus={(event) => {
+                    event.preventDefault();
+                    form.setFocus("firstName");
+                }}
+                onPointerDownOutside={preventOutsideClose ? (event) => event.preventDefault() : undefined}
+                onInteractOutside={preventOutsideClose ? (event) => event.preventDefault() : undefined}
+            >
         <DialogHeader className="flex flex-row items-center justify-between px-8 py-6 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-primary text-3xl">person_add</span>
@@ -115,14 +206,14 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
                         <FormField control={form.control} name="firstName" render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Nombre</FormLabel>
-                                <FormControl><Input className="h-12 px-4 text-base" placeholder="Ej: Juan" {...field} /></FormControl>
+                                <FormControl><Input tabIndex={1} className="h-12 px-4 text-base" placeholder="Ej: Juan" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )} />
                         <FormField control={form.control} name="lastName" render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Apellidos</FormLabel>
-                                <FormControl><Input className="h-12 px-4 text-base" placeholder="Ej: Pérez García" {...field} /></FormControl>
+                                <FormControl><Input tabIndex={2} className="h-12 px-4 text-base" placeholder="Ej: Pérez García" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )} />
@@ -130,14 +221,14 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
                             <FormField control={form.control} name="phone" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Teléfono</FormLabel>
-                                    <FormControl><Input className="h-12 px-4 text-base" placeholder="+34 600 000 000" {...field} /></FormControl>
+                                    <FormControl><Input tabIndex={3} className="h-12 px-4 text-base" placeholder="+34 600 000 000" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
                             <FormField control={form.control} name="email" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Correo Electrónico</FormLabel>
-                                    <FormControl><Input className="h-12 px-4 text-base" placeholder="juan@florista.com" {...field} /></FormControl>
+                                    <FormControl><Input tabIndex={4} className="h-12 px-4 text-base" placeholder="juan@florista.com" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
@@ -155,7 +246,7 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
                                 <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Rol en el Sistema</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
-                                        <SelectTrigger className="h-12 px-4 text-base">
+                                        <SelectTrigger tabIndex={5} className="h-12 px-4 text-base">
                                             <SelectValue placeholder="Seleccione un cargo" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -175,9 +266,13 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
                                 <FormItem>
                                     <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Tipo de Vehículo</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl><SelectTrigger className="h-12 px-4 text-base bg-white dark:bg-gray-800"><SelectValue /></SelectTrigger></FormControl>
+                                        <FormControl><SelectTrigger tabIndex={6} className="h-12 px-4 text-base bg-white dark:bg-gray-800"><SelectValue /></SelectTrigger></FormControl>
                                         <SelectContent>
                                             <SelectItem value="ninguno">N/A</SelectItem>
+                                            <SelectItem value="camioneta_empresa">Camioneta Empresa</SelectItem>
+                                            <SelectItem value="carro_empresa">Carro Empresa</SelectItem>
+                                            <SelectItem value="camioneta_propia">Camioneta Propia</SelectItem>
+                                            <SelectItem value="carro_propio">Carro Propio</SelectItem>
                                             <SelectItem value="furgoneta">Furgoneta Refrigerada</SelectItem>
                                             <SelectItem value="moto">Motocicleta</SelectItem>
                                             <SelectItem value="bici">Bicicleta Eléctrica</SelectItem>
@@ -189,7 +284,7 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
                             <FormField control={form.control} name="licenseNumber" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Número de Licencia</FormLabel>
-                                    <FormControl><Input className="h-12 px-4 text-base bg-white dark:bg-gray-800" placeholder="ID de conductor o licencia" {...field} /></FormControl>
+                                    <FormControl><Input tabIndex={7} className="h-12 px-4 text-base bg-white dark:bg-gray-800" placeholder="ID de conductor o licencia" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
@@ -199,7 +294,7 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
                                 <FormLabel className="text-charcoal-gray dark:text-gray-400 text-sm font-medium">Horario Laboral</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
-                                        <SelectTrigger className="h-12 px-4 text-base">
+                                        <SelectTrigger tabIndex={8} className="h-12 px-4 text-base">
                                             <SelectValue placeholder="Seleccione un turno"/>
                                         </SelectTrigger>
                                     </FormControl>
@@ -218,10 +313,10 @@ export function StaffFormDialog({ staffMember, isEditMode = false, children }: S
                 </div>
               </ScrollArea>
               <div className="px-8 py-6 bg-silk-gray dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-4">
-                  <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="px-8 py-3 rounded-full text-charcoal-gray dark:text-gray-300 font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors tracking-wide">
+                  <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)} className="px-8 py-3 rounded-full text-charcoal-gray dark:text-gray-300 font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors tracking-wide">
                       CANCELAR
                   </Button>
-                  <Button type="submit" disabled={isPending} className="px-10 py-3 rounded-full bg-primary text-white font-bold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-primary/20 tracking-wide flex items-center gap-2">
+                  <Button type="submit" disabled={isPending} className="px-10 py-3 rounded-full bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 tracking-wide flex items-center gap-2">
                       {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="material-symbols-outlined text-[18px]">save</span>}
                       GUARDAR PERSONAL
                   </Button>

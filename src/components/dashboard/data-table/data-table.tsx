@@ -24,21 +24,43 @@ import { DataTablePagination } from "./data-table-pagination";
 import type { Order } from "@/lib/definitions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  isLoading?: boolean;
+  loadingText?: string;
+  selectedId?: string | null;
+  onRowClick?: (row: TData) => void;
 }
 
 export function DataTable<TData extends Order, TValue>({
   columns,
   data,
+  isLoading = false,
+  loadingText = "Cargando...",
+  selectedId,
+  onRowClick,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [globalFilter, setGlobalFilter] = React.useState('')
+  const [dateFilter, setDateFilter] = React.useState("")
+
+  const filteredData = React.useMemo(() => {
+    if (!dateFilter) return data;
+    return data.filter((order) => {
+      if (!order.deliveryTime) return false;
+      const deliveryDate = new Date(order.deliveryTime);
+      const yyyy = deliveryDate.getFullYear();
+      const mm = String(deliveryDate.getMonth() + 1).padStart(2, "0");
+      const dd = String(deliveryDate.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}` === dateFilter;
+    });
+  }, [data, dateFilter]);
 
     const table = useReactTable({
-        data,
+      data: filteredData,
         columns,
         onSortingChange: setSorting,
         onGlobalFilterChange: setGlobalFilter,
@@ -67,11 +89,29 @@ export function DataTable<TData extends Order, TValue>({
                 </div>
             </div>
             <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" className="text-xs">Zona: Norte <span className="material-symbols-outlined text-sm ml-2">expand_more</span></Button>
-                <Button variant="outline" size="sm" className="text-xs">Estado: Pendiente <span className="material-symbols-outlined text-sm ml-2">expand_more</span></Button>
-                <Button variant="outline" size="sm" className="text-xs">Ventana: Mañana <span className="material-symbols-outlined text-sm ml-2">expand_more</span></Button>
-                <div className="h-8 w-[1px] bg-border mx-1"></div>
-                <Button variant="ghost" className="text-xs h-8">Limpiar Filtros</Button>
+              <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900">
+                <span className="text-muted-foreground">Fecha:</span>
+                <Input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="h-7 border-0 bg-transparent p-0 text-xs focus-visible:ring-0"
+                  aria-label="Filtrar por fecha de envío"
+                />
+              </div>
+              <Button variant="outline" size="sm" className="text-xs">Estado: Pendiente <span className="material-symbols-outlined text-sm ml-2">expand_more</span></Button>
+              <Button variant="outline" size="sm" className="text-xs">Ventana: Mañana <span className="material-symbols-outlined text-sm ml-2">expand_more</span></Button>
+              <div className="h-8 w-[1px] bg-border mx-1"></div>
+              <Button
+                variant="ghost"
+                className="text-xs h-8"
+                onClick={() => {
+                  setDateFilter("");
+                  setGlobalFilter("");
+                }}
+              >
+                Limpiar Filtros
+              </Button>
             </div>
         </div>
       <div className="overflow-x-auto">
@@ -95,12 +135,24 @@ export function DataTable<TData extends Order, TValue>({
             ))}
           </TableHeader>
           <TableBody className="divide-y divide-border">
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center text-sm text-muted-foreground">
+                  {loadingText}
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                  className={cn(
+                    "hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer",
+                    selectedId && (row.original.id === selectedId || row.original.orderNumber === selectedId)
+                      ? "bg-slate-50 dark:bg-slate-700/40"
+                      : ""
+                  )}
+                  onClick={() => onRowClick?.(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="px-6 py-4">

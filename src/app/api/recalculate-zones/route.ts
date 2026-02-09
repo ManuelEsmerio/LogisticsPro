@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const JSON_SERVER_URL = process.env.JSON_SERVER_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:9002';
+const JSON_SERVER_URL = process.env.JSON_SERVER_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 const NOMINATIM_URL = process.env.NOMINATIM_URL ?? 'https://nominatim.openstreetmap.org/search';
 
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
     const [ordersRes, zonesRes, staffRes] = await Promise.all([
       fetch(`${JSON_SERVER_URL}/orders`, { cache: 'no-store' }),
       fetch(`${JSON_SERVER_URL}/zones`, { cache: 'no-store' }),
-      fetch(`${JSON_SERVER_URL}/staff`, { cache: 'no-store' }),
+      fetch(`${JSON_SERVER_URL}/deliveryStaff`, { cache: 'no-store' }),
     ]);
 
     if (!ordersRes.ok || !zonesRes.ok || !staffRes.ok) {
