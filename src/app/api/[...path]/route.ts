@@ -43,6 +43,8 @@ async function proxyRequest(request: NextRequest, pathSegments: string[]) {
 
   const headers = new Headers(request.headers);
   headers.delete("host");
+  headers.delete("cookie");
+  headers.delete("authorization");
 
   const init: RequestInit = {
     method: request.method,

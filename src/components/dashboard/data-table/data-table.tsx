@@ -25,6 +25,13 @@ import type { Order } from "@/lib/definitions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -46,18 +53,31 @@ export function DataTable<TData extends Order, TValue>({
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [globalFilter, setGlobalFilter] = React.useState('')
   const [dateFilter, setDateFilter] = React.useState("")
+  const [statusFilter, setStatusFilter] = React.useState<
+    "all" | "pendiente" | "en_reparto" | "entregado" | "rechazado"
+  >("all")
+  const [slotFilter, setSlotFilter] = React.useState<
+    "all" | "morning" | "afternoon" | "evening"
+  >("all")
 
   const filteredData = React.useMemo(() => {
-    if (!dateFilter) return data;
     return data.filter((order) => {
-      if (!order.deliveryTime) return false;
+      if (statusFilter !== "all") {
+        const deliveryStatus = order.deliveryStatus ?? "pendiente";
+        if (deliveryStatus !== statusFilter) return false;
+      }
+      if (slotFilter !== "all") {
+        if (order.deliveryTimeSlot !== slotFilter) return false;
+      }
+      if (!order.deliveryTime) return !dateFilter;
       const deliveryDate = new Date(order.deliveryTime);
       const yyyy = deliveryDate.getFullYear();
       const mm = String(deliveryDate.getMonth() + 1).padStart(2, "0");
       const dd = String(deliveryDate.getDate()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}` === dateFilter;
+      if (dateFilter && `${yyyy}-${mm}-${dd}` !== dateFilter) return false;
+      return true;
     });
-  }, [data, dateFilter]);
+  }, [data, dateFilter, statusFilter, slotFilter]);
 
     const table = useReactTable({
       data: filteredData,
@@ -99,8 +119,29 @@ export function DataTable<TData extends Order, TValue>({
                   aria-label="Filtrar por fecha de envío"
                 />
               </div>
-              <Button variant="outline" size="sm" className="text-xs">Estado: Pendiente <span className="material-symbols-outlined text-sm ml-2">expand_more</span></Button>
-              <Button variant="outline" size="sm" className="text-xs">Ventana: Mañana <span className="material-symbols-outlined text-sm ml-2">expand_more</span></Button>
+              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
+                <SelectTrigger className="h-8 px-2 text-xs w-[160px]">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Estado: Todos</SelectItem>
+                  <SelectItem value="pendiente">Estado: Pendiente</SelectItem>
+                  <SelectItem value="en_reparto">Estado: En reparto</SelectItem>
+                  <SelectItem value="entregado">Estado: Entregado</SelectItem>
+                  <SelectItem value="rechazado">Estado: Rechazado</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={slotFilter} onValueChange={(value) => setSlotFilter(value as any)}>
+                <SelectTrigger className="h-8 px-2 text-xs w-[160px]">
+                  <SelectValue placeholder="Ventana" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Ventana: Todas</SelectItem>
+                  <SelectItem value="morning">Ventana: Mañana</SelectItem>
+                  <SelectItem value="afternoon">Ventana: Tarde</SelectItem>
+                  <SelectItem value="evening">Ventana: Noche</SelectItem>
+                </SelectContent>
+              </Select>
               <div className="h-8 w-[1px] bg-border mx-1"></div>
               <Button
                 variant="ghost"
@@ -108,6 +149,8 @@ export function DataTable<TData extends Order, TValue>({
                 onClick={() => {
                   setDateFilter("");
                   setGlobalFilter("");
+                  setStatusFilter("all");
+                  setSlotFilter("all");
                 }}
               >
                 Limpiar Filtros
@@ -148,6 +191,9 @@ export function DataTable<TData extends Order, TValue>({
                   data-state={row.getIsSelected() && "selected"}
                   className={cn(
                     "hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer",
+                    row.original.deliveryStatus === 'rechazado'
+                      ? "bg-orange-50/60 dark:bg-orange-900/20"
+                      : "",
                     selectedId && (row.original.id === selectedId || row.original.orderNumber === selectedId)
                       ? "bg-slate-50 dark:bg-slate-700/40"
                       : ""

@@ -19,9 +19,54 @@ export function parseDeliveryTime(value: unknown): Date | null {
     return null;
 }
 
+function normalizeDeliveryStatus(value: unknown): Order['deliveryStatus'] {
+    switch (value) {
+        case 'en_reparto':
+        case 'entregado':
+        case 'rechazado':
+        case 'pendiente':
+            return value;
+        case 'confirmado':
+            return 'en_reparto';
+        case 'regresado':
+            return 'rechazado';
+        default:
+            return 'pendiente';
+    }
+}
+
 function formatDeliveryTime(value: Date | null | undefined): string | null {
-    if (!value) return null;
-    return format(value, "dd/MM/yyyy");
+    if (!value || !isValid(value)) return null;
+    return value.toISOString();
+}
+
+async function getOrderByNumber(orderNumber: string): Promise<Order | null> {
+    try {
+        const res = await fetch(`${API_URL}/orders?orderNumber=${encodeURIComponent(orderNumber)}`);
+        if (!res.ok) return null;
+        const orders = await res.json();
+        const order = Array.isArray(orders) ? orders[0] : orders;
+        if (!order) return null;
+        return {
+            ...order,
+            id: order.id ?? order._id,
+            createdAt: new Date(order.createdAt),
+            deliveryTime: parseDeliveryTime(order.deliveryTime),
+            deliveryStatus: normalizeDeliveryStatus(order.deliveryStatus),
+            intentosEnvio: Number.isFinite(order.intentosEnvio) ? Number(order.intentosEnvio) : 0,
+            incidencias: Array.isArray(order.incidencias) ? order.incidencias : [],
+        };
+    } catch (error) {
+        console.error("getOrderByNumber error:", error);
+        return null;
+    }
+}
+
+async function ensureUniqueOrderNumber(orderNumber: string, excludeId?: string): Promise<void> {
+    const existing = await getOrderByNumber(orderNumber);
+    if (!existing) return;
+    if (excludeId && existing.id === excludeId) return;
+    throw new Error("ORDER_NUMBER_EXISTS");
 }
 
 // --- ORDERS ---
@@ -36,8 +81,12 @@ export async function getOrders(): Promise<Order[]> {
         return orders.map((order: any) => ({
             ...order,
             id: order.id ?? order._id,
+            paymentStatus: order.paymentStatus ?? order.paymentsStatus ?? 'due',
             createdAt: new Date(order.createdAt),
             deliveryTime: parseDeliveryTime(order.deliveryTime),
+            deliveryStatus: normalizeDeliveryStatus(order.deliveryStatus),
+                        intentosEnvio: Number.isFinite(order.intentosEnvio) ? Number(order.intentosEnvio) : 0,
+                        incidencias: Array.isArray(order.incidencias) ? order.incidencias : [],
         }));
   } catch (error) {
     console.error("getOrders error:", error);
@@ -47,11 +96,19 @@ export async function getOrders(): Promise<Order[]> {
 
 export async function getLatestOrderNumber(): Promise<string | null> {
     try {
-        const res = await fetch(`${API_URL}/orders?_sort=createdAt&_order=desc&_limit=1`);
+        const res = await fetch(`${API_URL}/orders`, { cache: "no-store" });
         if (!res.ok) return null;
         const orders = await res.json();
-        const latest = Array.isArray(orders) ? orders[0] : null;
-        return latest?.orderNumber ?? null;
+        const list = Array.isArray(orders) ? orders : [];
+        if (list.length === 0) return null;
+        const maxValue = list.reduce((max: number, order: any) => {
+            const value = String(order?.orderNumber ?? "");
+            const match = value.match(/#?FL-(\d+)/i) ?? value.match(/(\d+)/);
+            const numeric = match ? Number(match[1]) : 0;
+            return Number.isFinite(numeric) && numeric > max ? numeric : max;
+        }, 0);
+        if (maxValue <= 0) return null;
+        return `#FL-${String(maxValue).padStart(3, "0")}`;
     } catch (error) {
         console.error("getLatestOrderNumber error:", error);
         return null;
@@ -66,8 +123,12 @@ export async function getOrderById(id: string): Promise<Order | undefined> {
         return {
             ...order,
             id: order.id ?? order._id,
+            paymentStatus: order.paymentStatus ?? order.paymentsStatus ?? 'due',
             createdAt: new Date(order.createdAt),
             deliveryTime: parseDeliveryTime(order.deliveryTime),
+            deliveryStatus: normalizeDeliveryStatus(order.deliveryStatus),
+            intentosEnvio: Number.isFinite(order.intentosEnvio) ? Number(order.intentosEnvio) : 0,
+            incidencias: Array.isArray(order.incidencias) ? order.incidencias : [],
         };
     } catch (error) {
         console.error(`getOrderById(${id}) error:`, error);
@@ -76,8 +137,12 @@ export async function getOrderById(id: string): Promise<Order | undefined> {
 }
 
 export async function addOrder(orderData: Omit<Order, 'id' | 'createdAt'>): Promise<Order> {
+    await ensureUniqueOrderNumber(orderData.orderNumber);
     const newOrderPayload = {
         ...orderData,
+            deliveryStatus: normalizeDeliveryStatus(orderData.deliveryStatus),
+        intentosEnvio: Number.isFinite(orderData.intentosEnvio) ? Number(orderData.intentosEnvio) : 0,
+        incidencias: Array.isArray(orderData.incidencias) ? orderData.incidencias : [],
         createdAt: new Date().toISOString(),
         deliveryTime: formatDeliveryTime(orderData.deliveryTime),
     };
@@ -91,12 +156,29 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'createdAt'>): Prom
     return {
         ...newOrder,
         id: newOrder.id ?? newOrder._id,
+        paymentStatus: newOrder.paymentStatus ?? newOrder.paymentsStatus ?? 'due',
         createdAt: new Date(newOrder.createdAt),
         deliveryTime: parseDeliveryTime(newOrder.deliveryTime),
+            deliveryStatus: normalizeDeliveryStatus(newOrder.deliveryStatus),
+        intentosEnvio: Number.isFinite(newOrder.intentosEnvio) ? Number(newOrder.intentosEnvio) : 0,
+        incidencias: Array.isArray(newOrder.incidencias) ? newOrder.incidencias : [],
     };
 }
 
+export async function updateRouteAssignment(id: string, updates: Partial<Omit<RouteAssignment, 'id'>>): Promise<RouteAssignment | null> {
+    const res = await fetch(`${API_URL}/routeAssignments?_id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+}
+
 export async function updateOrder(id: string, updates: Partial<Omit<Order, 'id' | 'createdAt'>>): Promise<Order | null> {
+    if (typeof updates.orderNumber === "string" && updates.orderNumber.trim()) {
+        await ensureUniqueOrderNumber(updates.orderNumber.trim(), id);
+    }
     const updatePayload = {
         ...updates,
         ...(updates.deliveryTime instanceof Date && { deliveryTime: formatDeliveryTime(updates.deliveryTime) }),
@@ -113,8 +195,10 @@ export async function updateOrder(id: string, updates: Partial<Omit<Order, 'id' 
     return {
         ...updatedOrder,
         id: updatedOrder.id ?? updatedOrder._id,
+        paymentStatus: updatedOrder.paymentStatus ?? updatedOrder.paymentsStatus ?? 'due',
         createdAt: new Date(updatedOrder.createdAt),
         deliveryTime: parseDeliveryTime(updatedOrder.deliveryTime),
+        deliveryStatus: normalizeDeliveryStatus(updatedOrder.deliveryStatus),
     };
 }
 
@@ -193,7 +277,7 @@ export async function updateMultipleOrdersStatus(orderIds: string[], status: Ord
     try {
         await Promise.all(
             orderIds.map(id => 
-                fetch(`${API_URL}/orders/${id}`, {
+                fetch(`${API_URL}/orders?_id=${id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ paymentStatus: status }),
@@ -212,7 +296,13 @@ export async function getRouteAssignments(timeSlot?: RouteAssignment['timeSlot']
         const url = timeSlot ? `${API_URL}/routeAssignments?timeSlot=${timeSlot}` : `${API_URL}/routeAssignments`;
         const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch route assignments');
-        return await res.json();
+        const assignments = await res.json();
+        return (Array.isArray(assignments) ? assignments : []).map((assignment: any) => ({
+            ...assignment,
+            id: String(assignment.id ?? assignment._id ?? ''),
+            status: assignment.status ?? (assignment.locked ? 'confirmada' : 'pendiente'),
+            finishedAt: assignment.finishedAt ?? null,
+        }));
     } catch (error) {
         console.error("getRouteAssignments error:", error);
         return [];
@@ -231,5 +321,8 @@ export async function addRouteAssignments(assignments: Omit<RouteAssignment, 'id
             return res.json();
         })
     );
-    return created as RouteAssignment[];
+    return created.map((assignment: any) => ({
+        ...assignment,
+        id: String(assignment.id ?? assignment._id ?? ''),
+    })) as RouteAssignment[];
 }

@@ -34,8 +34,14 @@ export function OrdersTableClient() {
         const normalized = orders.map((order: any) => ({
           ...order,
           id: order.id ?? order._id,
+          paymentStatus: order.paymentStatus ?? order.paymentsStatus ?? 'due',
           createdAt: new Date(order.createdAt),
           deliveryTime: parseDeliveryTime(order.deliveryTime),
+          deliveryStatus: order.deliveryStatus === 'confirmado'
+            ? 'en_reparto'
+            : order.deliveryStatus === 'regresado'
+                ? 'rechazado'
+                : (order.deliveryStatus ?? 'pendiente'),
         }));
         if (isActive) {
           setData(normalized);

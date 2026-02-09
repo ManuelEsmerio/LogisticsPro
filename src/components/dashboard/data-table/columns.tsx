@@ -2,7 +2,6 @@
 
 import { ColumnDef, Row } from "@tanstack/react-table";
 import { format, isValid } from "date-fns";
-import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 import type { Order } from "@/lib/definitions";
@@ -10,6 +9,7 @@ import { parseDeliveryTime } from "@/lib/data";
 
 const PaymentStatusCell = ({ row }: { row: Row<Order> }) => {
   const status: Order['paymentStatus'] = row.getValue("paymentStatus");
+  const deliveryStatus: Order['deliveryStatus'] = row.original.deliveryStatus ?? 'pendiente';
   
   const statusConfig = {
     due: { label: 'Pendiente', className: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-500' },
@@ -19,10 +19,24 @@ const PaymentStatusCell = ({ row }: { row: Row<Order> }) => {
 
   const config = statusConfig[status] || statusConfig.due;
 
+  const deliveryStatusConfig = {
+    pendiente: { label: 'En proceso', className: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300' },
+    en_reparto: { label: 'En reparto', className: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' },
+    entregado: { label: 'Entregado', className: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' },
+    rechazado: { label: 'Rechazado', className: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' },
+  } as const;
+
+  const deliveryConfig = deliveryStatusConfig[deliveryStatus] ?? deliveryStatusConfig.pendiente;
+
   return (
-    <span className={cn('px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider', config.className)}>
-      {config.label}
-    </span>
+    <div className="flex flex-wrap items-center gap-2">
+      <span className={cn('px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider', config.className)}>
+        {config.label}
+      </span>
+      <span className={cn('px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider', deliveryConfig.className)}>
+        {deliveryConfig.label}
+      </span>
+    </div>
   );
 };
 
@@ -56,13 +70,6 @@ const PriorityCell = ({ row }: { row: Row<Order> }) => {
 const DeliveryTimeCell = ({ row }: { row: Row<Order> }) => {
   const timeSlot: Order['deliveryTimeSlot'] = row.original.deliveryTimeSlot;
   const exactTime: Order['deliveryTime'] = row.original.deliveryTime;
-  const [formattedDate, setFormattedDate] = useState("");
-
-  useEffect(() => {
-    if (exactTime) {
-      setFormattedDate(format(new Date(exactTime), "PPp"));
-    }
-  }, [exactTime]);
 
   if (timeSlot) {
     const timeSlotLabels = {
@@ -73,7 +80,7 @@ const DeliveryTimeCell = ({ row }: { row: Row<Order> }) => {
     return <span className="font-medium">{timeSlotLabels[timeSlot]}</span>;
   }
   if (exactTime) {
-    return <span className="font-medium">{formattedDate}</span>;
+    return <span className="font-medium">{format(new Date(exactTime), "PPp")}</span>;
   }
   return <span className="text-muted-foreground">N/A</span>;
 };

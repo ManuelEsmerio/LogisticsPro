@@ -46,9 +46,10 @@ async function Stats() {
     const pendingOrders = orders.filter(o => o.paymentStatus === 'due').length;
     const inRouteOrders = orders.filter(o => o.paymentStatus === 'assigned').length;
     const deliveredOrders = orders.filter(o => o.paymentStatus === 'paid').length;
+    const returnedOrders = orders.filter(o => o.deliveryStatus === 'rechazado').length;
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <StatCard 
                 title="Total Pedidos" 
                 value={totalOrders.toString()} 
@@ -82,13 +83,22 @@ async function Stats() {
                 iconBg="bg-emerald-50 dark:bg-emerald-900/20"
                 iconColor="text-emerald-700 dark:text-emerald-500"
             />
+            <StatCard 
+                title="Rechazados" 
+                value={returnedOrders.toString()}
+                subtext="Reintentos pendientes"
+                icon="assignment_return"
+                iconBg="bg-orange-50 dark:bg-orange-900/20"
+                iconColor="text-orange-700 dark:text-orange-500"
+            />
         </div>
     )
 }
 
 function StatsSkeleton() {
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <Skeleton className="h-[126px]" />
             <Skeleton className="h-[126px]" />
             <Skeleton className="h-[126px]" />
             <Skeleton className="h-[126px]" />

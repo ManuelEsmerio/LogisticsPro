@@ -43,12 +43,23 @@ export type Order = {
   contactNumber: string;
   deliveryType: "delivery" | "pickup";
   paymentStatus: "paid" | "due" | "assigned";
+  deliveryStatus?: "pendiente" | "en_reparto" | "entregado" | "rechazado";
   deliveryTimeSlot: 'morning' | 'afternoon' | 'evening' | null;
   deliveryTime: Date | null;
   latitude: number;
   longitude: number;
   createdAt: Date;
   priority: 'Alta' | 'Media' | 'Baja';
+  intentosEnvio?: number;
+  incidencias?: Array<{
+    fecha: string;
+    motivo: string;
+    repartidorId?: string;
+  }>;
+  lastAssignmentId?: string;
+  lastDriverId?: string;
+  lastRouteStatus?: 'pendiente' | 'en_reparto' | 'entregado' | 'rechazado';
+  deliveredAt?: string | null;
 };
 
 export type Waypoint = {
@@ -75,6 +86,8 @@ export type RouteAssignment = {
   duration: string;
   createdAt: string;
   locked: boolean;
+  status?: 'pendiente' | 'confirmada' | 'finalizada';
+  finishedAt?: string | null;
 };
 
 export const staffMemberSchema = z.object({
